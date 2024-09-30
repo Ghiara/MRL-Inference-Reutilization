@@ -1,0 +1,13 @@
+[submodule "rlkit"]
+	path = submodules/rlkit
+	url = https://github.com/rail-berkeley/rlkit.git
+[submodule "symmetrizer"]
+	path = submodules/symmetrizer
+	url = https://github.com/ElisevanderPol/symmetrizer.git
+[submodule "meta-environments"]
+	path = submodules/meta-environments
+	url = git@github.com:juldur1/meta-environments.git
+	branch = main
+[submodule "submodules/MRL-analysis-tools"]
+	path = submodules/MRL-analysis-tools
+	url = git@github.com:juldur1/MRL-analysis-tools.git

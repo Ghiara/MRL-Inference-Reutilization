@@ -1,0 +1,55 @@
+{
+    "path_to_weights": "output/cheetah-eight/2021_10_18_21_50_05_half_cheetah_eight_sb/weights",
+    "showcase_itr": 2000,
+    "train_or_showcase": "showcase_task_inference",
+    "PCGrad_params": {
+        "use_PCGrad": false
+    },
+    "algo_params": {
+        "sac_context_type": "sample",
+        "encoder_type": "gru",
+        "latent_size": 20,
+        "time_steps": 64,
+        "use_fixed_seeding": false,
+        "num_training_steps_policy": 0,
+        "num_training_steps_reconstruction": 0,
+	    "num_train_epochs": 1,
+        "num_train_tasks_per_episode": 5,
+        "num_transitions_per_episode": 200,
+        "max_path_length": 200,
+        "use_data_normalization": true,
+
+        "num_showcase": 10,
+        "test_evaluation_every": 1
+    },
+    "env_name": "cheetah-multi-task",
+    "env_params": {
+        "n_eval_tasks": 32,
+        "n_train_tasks": 0,
+        "task_variants": [
+            "velocity_forward",
+            "velocity_backward",
+            "stand_back",
+            "stand_front",
+            "goal_forward",
+            "goal_backward",
+            "flip_forward",
+            "jump"
+        ]
+    },
+    "inference_option": "sb",
+    "reconstruction_params": {
+        "alpha_kl_z": 0.001,
+        "beta_euclid": 0.0005,
+        "gamma_sparsity": 0.001,
+        "num_classes": 8
+    },
+    "util_params": {
+        "base_log_dir": "output",
+        "use_gpu": false,
+        "use_multiprocessing": false,
+        "num_workers": 2,
+        "gpu_id": 4,
+        "exp_name": "c8"
+    }
+}

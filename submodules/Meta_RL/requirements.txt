@@ -1,0 +1,19 @@
+numpy
+
+# Choose a suitable extra-index-url to switch between cpu-only and GPU-accelerated 
+# training!
+--extra-index-url https://download.pytorch.org/whl/cpu
+# --extra-index-url https://download.pytorch.org/whl/cu117
+torch
+
+python-dateutil
+tqdm
+matplotlib
+scikit-learn
+pytz
+pandas
+gym
+gtimer
+opencv-python
+pygame
+ray
