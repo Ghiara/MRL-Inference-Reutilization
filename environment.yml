@@ -1,0 +1,27 @@
+name: smrl
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - pytorch
+  # - cpuonly
+  - pytorch-cuda=11.8 # Consider 'cpuonly' instead if you are only running on a CPU 
+  - torchvision
+  - python-dateutil
+  - tqdm
+  - matplotlib
+  - scikit-learn
+  - pytz
+  - pandas
+  - pip:
+    - gym
+    - mujoco-py
+    - gtimer
+    - opencv-python
+    - pygame
+    - ray

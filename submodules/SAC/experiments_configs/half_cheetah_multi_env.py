@@ -44,14 +44,6 @@ config = dict(
                 # rotation_front=4,
                  ), 
 
-    # curriculum = dict(
-    #     max_vel=500,
-    #     change_tasks_after = [150,300,400],
-    #     changes_per_trajectory = [2,4,6],
-    #     max_steps_epochs = [1],
-    #     max_steps = [500],
-    #     random_initialization = 300,
-    # ),
     curriculum = dict(
         max_vel=200,
         change_tasks_after = [100,200,300],
@@ -63,8 +55,8 @@ config = dict(
 
     random_restart_after = 1,
 
-    pretrained = dict(path = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/new_cheetah_training/half_cheetah_21_06',
-                      epoch = 'epoch_1700')
+    # pretrained = dict(path = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/new_cheetah_training/half_cheetah_21_06',
+    #                   file_name = 'epoch_1700')
 
 
 )

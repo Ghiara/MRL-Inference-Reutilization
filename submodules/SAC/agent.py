@@ -155,17 +155,23 @@ class SAC:
 
             return value_loss.item(), 0.5 * (q1_loss + q2_loss).item(), policy_loss.item()
 
-    def choose_action(self, states, tasks, torch=False, max_action=False, sigmoid=False):
+    def choose_action(self, states, tasks, use_torch=False, max_action=False, sigmoid=False):
         states = np.expand_dims(states, axis=0)
         states = from_numpy(states).float().to(self.device)
         tasks = np.expand_dims(tasks, axis=0)
         tasks = from_numpy(tasks).float().to(self.device)
         if max_action:
-            action, _, m = self.policy_network.sample_or_likelihood(states, tasks, max_action, sigmoid=sigmoid)
-            return action.detach(), m
+            action, m = self.policy_network.sample_or_likelihood(states, tasks, max_action, sigmoid=sigmoid)
+            mask = torch.nn.functional.one_hot(m, num_classes=self.n_actions).float()
+            # Apply the mask to retain only the max entry, while keeping gradients
+            action = action * mask
+            if use_torch:
+                return action.detach()
+            else:
+                action.detach().cpu().numpy()[0]
 
         action, _ = self.policy_network.sample_or_likelihood(states, tasks, max_action, sigmoid=sigmoid)
-        if torch:
+        if use_torch:
             return action.detach()
         return action.detach().cpu().numpy()[0]
 

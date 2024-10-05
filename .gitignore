@@ -1,6 +1,10 @@
 ### File types ###
 *.ipynb
 *.sh
+.DS_Store
+.contributing/
+.delete/
+.idea/
 
 ### Files ###
 *playground*
@@ -8,10 +12,13 @@ nohup.out
 
 
 ### Directories ###
+Dockerfile
 data/*
 output/
+temp_bnp/
 checkpoints/
 videos/
+tensorboard/
 submodules/meta_rand_envs
 specific/meta_rand_envs
 specific/meta_env_wrappers
@@ -20,6 +27,11 @@ evaluation*/
 .history/
 logs/
 **/logs/
+trajectories/
+experiment_plots/
+temp/
+.temp/
+trajectories_plots/
 ### Visual Studio Code ###
 .vscode/*
 !.vscode/settings.json

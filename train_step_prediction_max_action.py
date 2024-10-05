@@ -35,7 +35,7 @@ from mrl_analysis.plots.plot_settings import *
 DEVICE = 'cuda'
 ptu.set_gpu_mode(True)
 
-experiment_name = 'retrain_walker_newbeta0.1'
+experiment_name = 'cheetah_max_action_old_beta'
 # TODO: einheitliches set to device
 simple_env_dt = 0.05
 sim_time_steps = 20
@@ -47,8 +47,8 @@ policy_update_steps = 512
 
 def log_all(agent, path, q1_loss, policy_loss, rew, episode, save_network='high_level', additional_plot=False):
     '''
-    # Save under structure:
-    # - /home/ubuntu/juan/Meta-RL/experiments_transfer_function/<name_of_experiment>
+    # This function is used to save loss/reward histories and weights under structure:
+    # - path
     #     - plots
     #         - mean_reward_history
     #         - qf_loss
@@ -127,6 +127,9 @@ def log_all(agent, path, q1_loss, policy_loss, rew, episode, save_network='high_
         save_plot(additional_plot['data'], name=additional_plot['name'], path=path_plots)
 
 def get_encoder(path, shared_dim, encoder_input_dim):
+    '''
+    # This function is used to load the encoder trained on the toy agent given by path
+    '''
     path = os.path.join(path, 'weights')
     for filename in os.listdir(path):
         if filename.startswith('encoder'):
@@ -162,7 +165,10 @@ def get_encoder(path, shared_dim, encoder_input_dim):
     return encoder
 
 
-def get_complex_agent(env, complex_agent_config):
+def get_complex_agent(env, complex_agent_config): 
+    '''
+    # This function is used to load the low-level controller specifide by comlpex_agent_config
+    '''
     pretrained = complex_agent_config['experiments_repo']+complex_agent_config['experiment_name']+f"/models/policy_model/epoch_{complex_agent_config['epoch']}.pth"
     n_states = env.observation_space.shape[0]
     n_actions = env.action_space.shape[0]
@@ -183,6 +189,8 @@ def cheetah_to_simple_env_map(
     """
     Maps transitions from the cheetah environment
     to the discrete, one-dimensional goal environment.
+    This function only outputs position and velocity. 
+    For more tasks, take a look at multiple_cheetah_to_simple_env_map
     """
 
     ### little help: [0:3] gives elements in positions 0,1,2 
@@ -197,6 +205,11 @@ def cheetah_to_simple_env_map(
     return simple_observations, next_simple_observations
 
 def multiple_cheetah_to_simple_env_map(obs, next_obs, env):
+    """
+    Maps transitions from the cheetah environment
+    to the discrete, one-dimensional goal environment.
+    This function only outputs position and velocity.
+    """
     simple_observations = np.zeros(obs_dim)
     simple_observations[...,0] = obs[...,-3]
     simple_observations[...,1] = obs[...,0]
@@ -217,7 +230,9 @@ def multiple_cheetah_to_simple_env_map(obs, next_obs, env):
 
 
 def _frames_to_gif(frames: List[np.ndarray], info, gif_path, transform: Callable = None):
-    """ Write collected frames to video file """
+    """
+    Create a gif from frames
+    """
     os.makedirs(os.path.dirname(gif_path), exist_ok=True)
     with imageio.get_writer(gif_path, mode='I', fps=10) as writer:
         for i, frame in enumerate(frames):
@@ -238,6 +253,9 @@ def _frames_to_gif(frames: List[np.ndarray], info, gif_path, transform: Callable
 
 def get_decoder(path, action_dim, obs_dim, reward_dim, latent_dim, output_action_dim, net_complex_enc_dec, variant):
     path = os.path.join(path, 'weights')
+    """
+    Loads the decoder from the inference module
+    """
     for filename in os.listdir(path):
         if filename.startswith('decoder'):
             name = os.path.join(path, filename)
@@ -282,22 +300,25 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
     tasks_pos = []
     tasks_jump = []
     tasks_rot =[]
-    for episode in range(30000):
+    
 
-        
-        
+    for episode in range(30000):
             
         print("\033[1m" + f"Episode: {episode}" + "\033[0m")
         print(experiment_name)
 
         l_vars = []
         labels = []
-
         done = 0
         value_loss, q_loss, policy_loss = [], [], []
         low_value_loss, low_q_loss, low_policy_loss = [], [], []
+
         print('Collecting samples...')
         for batch in tqdm(range(batch_size)):
+
+            '''
+            For visualization purposes
+            '''
             plot = False
             record_video = False
             if episode % plot_every == 0 and batch == 0:
@@ -309,12 +330,14 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                 plot = True
                 record_video = True
 
-
-
+            '''
+            Initialize data collection for plots
+            '''
             episode_reward = 0
             low_episode_reward = 0
             rew, low_rew = [], []
             x_pos_curr, x_vel_curr, jump_curr, rot_curr = [],[], [], []
+            sim_time_steps_list = []
             path_length = 0
             obs = env.reset()[0]
             x_pos_curr.append(env.sim.data.qpos[0])
@@ -323,57 +346,44 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
             rot_curr.append(env.sim.data.qpos[2])
             contexts = torch.zeros((n_tasks, variant['algo_params']['time_steps'], obs_dim + 1 + obs_dim), device=DEVICE)
             task = env.sample_task(test=True)
-            # count=0
-            # while env.base_task not in [
-            #                             env.config.get('tasks',{}).get('goal_front'), 
-            #                             env.config.get('tasks',{}).get('goal_back'),
-            #                             env.config.get('tasks',{}).get('forward_vel'), 
-            #                             env.config.get('tasks',{}).get('backward_vel')]:
-            #     task = env.sample_task(test=True)
-            #     count+=1
-            #     if count>150:
-            #         return 'Failed to sample task. Attempted 150 times.'
-            # env.update_task(task)
 
-            sim_time_steps_list = []
+            """
+            Use this if you want to filter tasks. Only sample from the list
+            """
+            count=0
 
-            # if env.base_task in [env.config.get('tasks',{}).get('goal_front'), env.config.get('tasks',{}).get('goal_back')]:
-            #     max_path_len = 300
+            while env.base_task not in [
+                                        env.config.get('tasks',{}).get('goal_front'), 
+                                        env.config.get('tasks',{}).get('goal_back'),
+                                        env.config.get('tasks',{}).get('forward_vel'), 
+                                        env.config.get('tasks',{}).get('backward_vel')]:
+                task = env.sample_task(test=True)
+                count+=1
+                if count>150:
+                    return 'Failed to sample task. Attempted 150 times.'
+            env.update_task(task)
+
+
             while path_length < max_path_len:
 
-                # get encodings
+                '''
+                Get Encodings
+                '''
                 encoder_input = contexts.detach().clone()
                 encoder_input = encoder_input.view(encoder_input.shape[0], -1).to(DEVICE)
-                mu, log_var = encoder(encoder_input)     # Is this correct??
-
-                # Save values for plotting
-                # if env.task[0]<0:
-                #     label = -1
-                # elif env.task[0]>0:
-                #     label = 1
-                # elif env.task[3]<0:
-                #     label = -2
-                # elif env.task[3]>0:
-                #     label = 2
-                # if path_length == 0:
-                #     l_vars = mu.detach().cpu().numpy()
-                #     labels = np.array([label])
-                # else:
-                #     l_vars = np.concatenate((l_vars, mu.detach().cpu().numpy()), axis = 0)
-                #     labels = np.concatenate((labels, np.array([label])), axis = 0)
+                mu, log_var = encoder(encoder_input)
 
                 obs_before_sim = env._get_obs()
 
-                # Save latent vars
-                # policy_input = torch.cat([ptu.from_numpy(obs), mu.squeeze()], dim=-1)
-                action_prev = high_level_controller.choose_action(obs.squeeze(), mu.cpu().detach().numpy().squeeze(), torch=True, max_action=False, sigmoid=True).squeeze()
-                # action_prev[env.config.get('tasks',{}).get('stand_back')] = 0
+                '''
+                Get High-Level Action
+                '''
+                action_prev = high_level_controller.choose_action(obs.squeeze(), mu.cpu().detach().numpy().squeeze(), use_torch=True, max_action=True, sigmoid=True).squeeze()
 
-                # TODO: Not best suited for position since once it reaches the position, it must stay at that position. Think about an alternative
+                '''
+                
+                '''
                 base_task_pred = torch.argmax(torch.abs(action_prev))
-                # action_prev[[1,2,4]] = 0 * action_prev[[1,2,4]]
-                # action = action_prev
-                #TODO: redo this with new trainings
                 action = torch.zeros_like(action_prev).to(DEVICE)
                 action[base_task_pred] = action_prev[base_task_pred]
                 desired_state = torch.zeros_like(action).to(DEVICE)
@@ -404,16 +414,20 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                     desired_state[base_task_pred] = action[base_task_pred]
 
 
+                '''
+                sim_time_steps is the striding factor. It allows the agent to perform x action before updating high-level action and encodings
+                '''
                 r = 0
-                sim_time_steps = int(torch.clamp(step_predictor.choose_action(obs, desired_state.detach().cpu().numpy(), torch=True).squeeze()*max_steps,1,max_steps))
+                sim_time_steps = int(torch.clamp(step_predictor.choose_action(obs, desired_state.detach().cpu().numpy(), use_torch=True).squeeze()*max_steps,1,max_steps))
                 for i in range(sim_time_steps):
+
+                    '''
+                    Get low-level action and perform step
+                    '''
                     complex_action = transfer_function.get_action(ptu.from_numpy(obs), action, return_dist=False)
-                    # complex_action = transfer_function.get_action(ptu.from_numpy(obs), action, return_dist=False)
                     next_obs, step_r, done, truncated, env_info = env.step(complex_action.detach().cpu().numpy(), healthy_scale=0)
 
                     penalty_r = action_prev
-                    # penalty_r[base_task_pred] = 0
-                    # step_r -= 0.05 * torch.sum(torch.square(penalty_r)).detach().cpu().numpy()
                     step_r -= 0.05 * torch.sum(torch.abs(penalty_r)).detach().cpu().numpy()
                     # step_r = step_r.clip(-3, 0)
                     obs = next_obs
@@ -432,20 +446,22 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
 
                 path_length+=1
 
-                # r = r/sim_time_steps
                 sim_time_steps_list.append(sim_time_steps)
 
+                '''
+                Calculate low-level reward. Penalize too many steps with beta
+                '''
                 if base_task_pred in [env.config.get('tasks',{}).get('goal_front')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['goal_front']].detach().cpu().numpy()-env.sim.data.qpos[0]+beta*sim_time_steps)/np.abs(action_normalize)
+                    low_level_r = - np.abs(action[env.config['tasks']['goal_front']].detach().cpu().numpy()-env.sim.data.qpos[0])/np.abs(action_normalize) - beta*sim_time_steps
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('goal_back')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['goal_back']].detach().cpu().numpy()-env.sim.data.qpos[0]+beta*sim_time_steps)/np.abs(action_normalize)
+                    low_level_r = - np.abs(action[env.config['tasks']['goal_back']].detach().cpu().numpy()-env.sim.data.qpos[0])/np.abs(action_normalize) - beta*sim_time_steps
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('forward_vel')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['forward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0]+beta*sim_time_steps)/np.abs(action[env.config['tasks']['forward_vel']].item())
+                    low_level_r = - np.abs(action[env.config['tasks']['forward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0])/np.abs(action[env.config['tasks']['forward_vel']].item()) - beta*sim_time_steps
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('backward_vel')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['backward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0]+beta*sim_time_steps)/np.abs(action[env.config['tasks']['backward_vel']].item())
+                    low_level_r = - np.abs(action[env.config['tasks']['backward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0])/np.abs(action[env.config['tasks']['backward_vel']].item()) - beta*sim_time_steps
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('stand_front')]:
                     low_level_r = - np.abs(action[env.config['tasks']['stand_front']].detach().cpu().numpy()-env.sim.data.qpos[2])/np.abs(action[env.config['tasks']['stand_front']].item()) - beta * sim_time_steps
@@ -467,12 +483,18 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                 prev_simple_obs, next_simple_obs = cheetah_to_simple_env_map(obs_before_sim, obs)
                 # prev_simple_obs, next_simple_obs = multiple_cheetah_to_simple_env_map(obs_before_sim, obs,env)
                 
+                '''
+                Update encoder inputs
+                '''
                 data = torch.cat([ptu.from_numpy(prev_simple_obs), torch.unsqueeze(torch.tensor(r, device=DEVICE), dim=0), ptu.from_numpy(next_simple_obs)], dim=0).unsqueeze(dim=0)
                 context = torch.cat([contexts.squeeze(), data], dim=0)
                 contexts = context[-time_steps:, :]
                 contexts = contexts.unsqueeze(0).to(torch.float32)
 
 
+            '''
+            Plot results
+            '''
             if env.base_task in [env.config.get('tasks',{}).get('goal_front'), env.config.get('tasks',{}).get('goal_back')]:
                 tasks_pos.append(task[env.base_task])
                 x_pos_plot.append(np.array(x_pos_curr))
@@ -498,6 +520,7 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                 rot_plot.pop(0)
                 tasks_rot.pop(0)
 
+            
             if plot and len(tasks_vel)>1 and len(tasks_vel)>1:
                 # size = frames[0].shape
                 window_size = 10
@@ -646,36 +669,21 @@ if __name__ == "__main__":
 
     inference_path = '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm'
 
-    
-    # complex_agent_config = dict(
-    #     environment = HalfCheetahMixtureEnv(env_config),
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'half_cheetah_definitive_training',
-    #     epoch = 1000,
-    # )
-    # complex_agent_position = dict(
-    #     environment = HalfCheetahMixtureEnv(env_config),
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'half_cheetah_dt0.01_mall_vel3',
-    #     epoch = 6000,
-    # )
-    # complex_agent_vel = dict(
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'half_cheetah_dt0.01_only_vel',
-    #     epoch = 2000,
-    # )
-    # complex_agent = dict(
-    #     environment = HalfCheetahMixtureEnv,
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'new_cheetah_training/half_cheetah_initial_random',
-    #     epoch = 700,
-    # )
+    '''
+    Define the low-level controller and agent to reuse the inference mechanism
+    '''
     complex_agent = dict(
+        environment = HalfCheetahMixtureEnv,
         experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-        experiment_name = 'walker_full_06_07',
-        epoch = 2100,
-        environment = WalkerMulti,
+        experiment_name = 'new_cheetah_training/half_cheetah_initial_random',
+        epoch = 700,
     )
+    # complex_agent = dict(
+    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
+    #     experiment_name = 'walker_full_06_07',
+    #     epoch = 2100,
+    #     environment = WalkerMulti,
+    # )
     # complex_agent = dict(
     #     environment = HopperMulti,
     #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
@@ -687,25 +695,11 @@ if __name__ == "__main__":
     with open(complex_agent['experiments_repo'] + complex_agent['experiment_name'] + '/config.json', 'r') as file:
         env_config = json.load(file)
 
-    # from experiments_configs.half_cheetah_multi_env import config as env_config
-
-    # complex_agent_config = dict(
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'hopper_change_task_dt_0.01(before0.004)',
-    #     epoch = 16000,
-    # )
-    # with open(complex_agent_config['experiments_repo'] + complex_agent_config['experiment_name'] + '/config.json', 'r') as file:
-    #     env_config = json.load(file)
-    # environment = HopperMulti(env_config)
-    # complex_agent_config['environment'] = environment
-
     env = complex_agent['environment'](env_config)
     env.render_mode = 'rgb_array'
 
     with open(f'{inference_path}/variant.json', 'r') as file:
         variant = json.load(file)
-
-    # ptu.set_gpu_mode(variant['util_params']['use_gpu'], variant['util_params']['gpu_id'])
 
     m = variant['algo_params']['sac_layer_size']
     simple_env = ENVS[variant['env_name']](**variant['env_params'])         # Just used for initilization purposes
@@ -717,7 +711,6 @@ if __name__ == "__main__":
     latent_dim = variant['algo_params']['latent_size']
     time_steps = variant['algo_params']['time_steps']
     num_classes = variant['reconstruction_params']['num_classes']
-    # max_path_len = variant['algo_params']['max_path_length']
     reward_dim = 1
     encoder_input_dim = time_steps * (obs_dim + reward_dim + obs_dim)
     shared_dim = int(encoder_input_dim / time_steps * net_complex_enc_dec)
@@ -740,10 +733,7 @@ if __name__ == "__main__":
 
     memory = Memory(1e+6)
     encoder = get_encoder(inference_path, shared_dim, encoder_input_dim)
-    transfer_function = get_complex_agent(env, complex_agent)
-    # transfer_function_vel = get_complex_agent(env, complex_agent_vel)
-    # pretrained_transfer = dict(path=os.path.join(complex_agent_config['experiments_repo'], complex_agent_config['experiment_name']),
-    #                            epoch = complex_agent_config['epoch'])
+    low_level_controller = get_complex_agent(env, complex_agent)
 
     high_level_controller = SAC(n_states=env.observation_space.shape[0],
                 n_actions=env.action_space.shape[0],
@@ -758,7 +748,7 @@ if __name__ == "__main__":
                 lr=3e-4,
                 action_bounds=[-50,50],
                 reward_scale=1, 
-                pretrained=dict(path='/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm/retrain_walker', file_name='high_level')
+                # pretrained=dict(path='/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm/retrain_walker', file_name='high_level')
                 )
     output_action_dim = 8
     # decoder = get_decoder(inference_path, action_dim, obs_dim, reward_dim, latent_dim, output_action_dim, net_complex_enc_dec, variant)
@@ -775,9 +765,9 @@ if __name__ == "__main__":
                 lr=3e-4,
                 action_bounds=[-50,50],
                 reward_scale=1, 
-                pretrained=dict(path='/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm/retrain_walker', file_name='low_level')
+                # pretrained=dict(path='/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm/retrain_walker', file_name='low_level')
                 )
 
     rollout(env, encoder, decoder, high_level_controller, step_predictor,
-                                        transfer_function, variant, obs_dim, action_dim, 
+                                        low_level_controller, variant, obs_dim, action_dim, 
                                         max_path_len, n_tasks=1, inner_loop_steps=10, save_video_path=inference_path)

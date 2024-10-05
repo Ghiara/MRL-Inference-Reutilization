@@ -1,147 +1,528 @@
-"""
-A runner file which can be called from a console.
-
-Author(s): 
-    Julius Durmann
-Contact: 
-    julius.durmann@tum.de
-Date: 
-    2023-01-13
-
-Usage:
-    Run
-    ```
-    python runner_julius.py --help
-    ```
-    for additonal information about the arguments.
-Example:
-    ```
-    python runner_julius.py "configs.environment_factory.toy1d" "configs.base_configuration.config"
-    ```
-"""
+# Task Inference based meta-rl algorithm using Gaussian mixture models and gated Recurrent units (TIGR)
 
 import os
+import numpy as np
+import click
+import json
 import torch
-import ray
-from datetime import datetime
-import pytz
-from typing import Dict, Callable, Tuple
+import copy
 
-from smrl.experiment.experiment_setup import setup_experiment
-import smrl.utility.console_strings as console_strings
+from rlkit.envs import ENVS
+from rlkit.envs.wrappers import NormalizedBoxEnv
+from rlkit.torch.sac.policies import TanhGaussianPolicy
+from rlkit.torch.networks import Mlp, FlattenMlp
+from rlkit.launchers.launcher_util import setup_logger
+import rlkit.torch.pytorch_util as ptu
+from configs.default import default_config
+from configs.toy_config import toy_config
+from configs.toy2d_config import toy2d_config
 
-from smrl.environments.meta_env import MetaEnv
+from tigr.task_inference.prediction_networks import DecoderMDP, ExtendedDecoderMDP
+from tigr.sac import PolicyTrainer
+from tigr.stacked_replay_buffer import StackedReplayBuffer
+from tigr.rollout_worker import RolloutCoordinator
+from tigr.agent_module import Agent
+# from tigr.agent_module import Agent, ScriptedPolicyAgent
+from tigr.training_algorithm import TrainingAlgorithm
+# from tigr.task_inference.true_gmm_inference import DecoupledEncoder
+# from tigr.trainer.true_gmm_trainer import AugmentedTrainer
+from tigr.task_inference.dpmm_bnp import BNPModel
+from tigr.task_inference.dpmm_inference import DecoupledEncoder
+from tigr.trainer.dpmm_trainer import AugmentedTrainer
+# from tigr.task_inference.stick_break_inference import DecoupledEncoder
+# from tigr.trainer.stick_break_trainer import AugmentedTrainer
 
+from torch.utils.tensorboard import SummaryWriter
+import vis_utils.tb_logging as TB
 
-def main(
-    environment_factory: Callable[[], Tuple[MetaEnv, MetaEnv]], 
-    config: Dict, 
-    log_dir: str = "./data", 
-    gpu: str = "", 
-    multithreading: bool = True, 
-    save_env: bool = False,
-    path_to_weights: str = None, 
-    itr: str = None,
-    verbose: bool = True,
-    temp_dir: str = None,
-    log_epoch_gap: int = 50,
-):
-    
-    config['environment_factory'] = environment_factory
-    if 'path_collector_kwargs' in config.keys():
-        config['path_collector_kwargs']['save_env_in_snapshot'] = save_env
+task_given = True
+
+def experiment(variant):
+    # optional GPU mode
+    ptu.set_gpu_mode(variant['util_params']['use_gpu'], variant['util_params']['gpu_id'])
+    torch.set_num_threads(1)
+
+    # Important: Gru and Conv only work with trajectory encoding
+    if variant['algo_params']['encoder_type'] in ['gru'] and variant['algo_params']['encoding_mode'] != 'trajectory':
+        print(f'\nInformation: Setting encoding mode to trajectory since encoder type '
+              f'"{variant["algo_params"]["encoder_type"]}" doesn\'t work with '
+              f'"{variant["algo_params"]["encoding_mode"]}"!\n')
+        variant['algo_params']['encoding_mode'] = 'trajectory'
+    elif variant['algo_params']['encoder_type'] in ['transformer', 'conv'] and variant['algo_params']['encoding_mode'] != 'transitionSharedY':
+        print(f'\nInformation: Setting encoding mode to trajectory since encoder type '
+              f'"{variant["algo_params"]["encoder_type"]}" doesn\'t work with '
+              f'"{variant["algo_params"]["encoding_mode"]}"!\n')
+        variant['algo_params']['encoding_mode'] = 'transitionSharedY'
+
+    # Seeding
+    if(variant['algo_params']['use_fixed_seeding']):
+        torch.manual_seed(variant['algo_params']['seed'])
+        np.random.seed(variant['algo_params']['seed'])
+
+    # create logging directory
+    experiment_log_dir = setup_logger(variant['env_name'], variant=variant, exp_id=variant['util_params']['exp_name'],
+                                      base_log_dir=variant['util_params']['base_log_dir'], snapshot_mode='gap',
+                                      snapshot_gap=variant['algo_params']['snapshot_gap'])
+
+    # Create tensorboard writer and reset values
+    TB.TENSORBOARD_LOGGER = SummaryWriter(log_dir=os.path.join(experiment_log_dir, 'tensorboard'))
+    TB.LOG_INTERVAL = variant['util_params']['tb_log_interval']
+    TB.TRAINING_LOG_STEP = 0
+    TB.AUGMENTATION_LOG_STEP = 0
+    TB.TI_LOG_STEP = 0
+    TB.DEBUG_LOG_STEP = 0
+
+    # create multi-task environment and sample tasks
+    env = ENVS[variant['env_name']](**variant['env_params'])
+    if variant['env_params']['use_normalized_env']:
+        env = NormalizedBoxEnv(env)
+    obs_dim = int(np.prod(env.observation_space.shape))
+    action_dim = int(np.prod(env.action_space.shape))
+    reward_dim = 1
+    tasks = list(range(len(env.tasks)))
+    train_tasks = list(range(len(env.train_tasks)))
+    test_tasks = tasks[-variant['env_params']['n_eval_tasks']:]
+    # Dump task dict as json
+    name2number = None
+    if hasattr(env, 'name2number'):
+        name2number = env.name2number
+        with open(os.path.join(experiment_log_dir, 'task_dict.json'), 'w') as f:
+            json.dump(name2number, f)
+
+    # instantiate networks
+    net_complex_enc_dec = variant['reconstruction_params']['net_complex_enc_dec']
+    latent_dim = variant['algo_params']['latent_size']
+    time_steps = variant['algo_params']['time_steps']
+    num_classes = variant['reconstruction_params']['num_classes']
+
+    # encoder used: single transitions or trajectories
+    if variant['algo_params']['encoding_mode'] == 'transitionSharedY':
+        encoder_input_dim = obs_dim + action_dim + reward_dim + obs_dim
+        encoder_input_dim = obs_dim + reward_dim + obs_dim
+        shared_dim = int(encoder_input_dim * net_complex_enc_dec)  # dimension of shared encoder output
+    elif variant['algo_params']['encoding_mode'] == 'trajectory':
+        encoder_input_dim = time_steps * (obs_dim + reward_dim + obs_dim)
+        shared_dim = int(encoder_input_dim / time_steps * net_complex_enc_dec)  # dimension of shared encoder output
     else:
-        config['path_collector_kwargs'] = {'save_env_in_snapshot': save_env}
-    environment_name = environment_factory.__name__
+        raise NotImplementedError
 
-    console_strings.verbose = verbose
+    bnp_model = BNPModel(
+        save_dir=variant['dpmm_params']['save_dir'],
+        start_epoch=variant['dpmm_params']['start_epoch'],
+        gamma0=variant['dpmm_params']['gamma0'],
+        num_lap=variant['dpmm_params']['num_lap'],
+        fit_interval=variant['dpmm_params']['fit_interval'],
+        kl_method=variant['dpmm_params']['kl_method'],
+        birth_kwargs=variant['dpmm_params']['birth_kwargs'],
+        merge_kwargs=variant['dpmm_params']['merge_kwargs']
+    )
 
-    # GPU available?
-    os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"]=gpu
+    encoder = DecoupledEncoder(
+        shared_dim,
+        encoder_input_dim,
+        latent_dim,
+        num_classes,
+        time_steps,
+        encoding_mode=variant['algo_params']['encoding_mode'],
+        timestep_combination=variant['algo_params']['timestep_combination'],
+        encoder_type=variant['algo_params']['encoder_type'],
+        bnp_model=bnp_model
+    )
 
-    # MULTITHREADING
-    os.environ["MULTITHREADING"] = str(multithreading)
-    if os.environ["MULTITHREADING"] == "True":
-        if not ray.is_initialized():
-            print("Initializing ray ...")
-            ray.init(num_cpus=4, log_to_driver=console_strings.verbose, _temp_dir=temp_dir)
+    decoder = DecoderMDP(
+        action_dim,
+        obs_dim,
+        reward_dim,
+        latent_dim,
+        net_complex_enc_dec,
+        variant['env_params']['state_reconstruction_clip'],
+    )
 
-    experiment_name = f"{environment_name}_{config['description']['name']}"
+    output_action_dim = False
+    if task_given:
+       output_action_dim = 8
+       decoder = ExtendedDecoderMDP(
+        action_dim,
+        obs_dim,
+        reward_dim,
+        latent_dim,
+        output_action_dim,
+        net_complex_enc_dec,
+        variant['env_params']['state_reconstruction_clip'],
+    ) 
 
-    # Print summary before running experiment
-    print("\n--------------------------------------------------")
-    print(f"Experiment name:   {experiment_name}")
-    print(f"Environment:       {environment_name}")
-    print(f"Configuration:     {config['description']['name']}")
-    print(f"Logging directory: {log_dir}")
-    print(f"GPU:               {gpu if gpu != '' else '<None>'}")
-    print(f"Multithreading:    {multithreading}")
-    print(f"Save environment:  {save_env}")
-    print(f"Verbose:           {verbose}")
-    if path_to_weights is not None:
-        print(f"Path to weights:   {path_to_weights}")
-    if itr is not None:
-        print(f"Iteration:         {itr}")
-    if temp_dir is not None:
-        print(f"Temp. directory:   {temp_dir}")
-    print("--------------------------------------------------\n")
+    M = variant['algo_params']['sac_layer_size']
+    if variant['algo_params']['sac_context_type']  == 'sample':
+        policy_latent_dim = latent_dim
+    else:
+        policy_latent_dim  = latent_dim *2
+    qf1 = FlattenMlp(
+        input_size=(obs_dim + policy_latent_dim) + action_dim,
+        output_size=1,
+        hidden_sizes=[M, M, M],
+    )
+    qf2 = FlattenMlp(
+        input_size=(obs_dim + policy_latent_dim) + action_dim,
+        output_size=1,
+        hidden_sizes=[M, M, M],
+    )
+    target_qf1 = FlattenMlp(
+        input_size=(obs_dim + policy_latent_dim) + action_dim,
+        output_size=1,
+        hidden_sizes=[M, M, M],
+    )
+    target_qf2 = FlattenMlp(
+        input_size=(obs_dim + policy_latent_dim) + action_dim,
+        output_size=1,
+        hidden_sizes=[M, M, M],
+    )
+    policy = TanhGaussianPolicy(
+        obs_dim=(obs_dim + policy_latent_dim),
+        action_dim=action_dim,
+        latent_dim=policy_latent_dim,
+        hidden_sizes=[M, M, M],
+    )
 
-    print(f"GPU available: {'Yes' if torch.cuda.is_available() else 'No'}")
-    # Run experiment
-    current_time = datetime.now().astimezone(pytz.timezone('Europe/Berlin'))
-    logger_kwargs = {
-        'log_dir': os.path.join(log_dir, f"{experiment_name}_{current_time.strftime('%Y-%m-%d_%H-%M-%S')}"),
-        'snapshot_mode': 'gap_and_last',
-        'snapshot_gap': log_epoch_gap,
-    }
-    if path_to_weights is not None:
-        logger_kwargs['log_dir'] = path_to_weights
-    algorithm, _ = setup_experiment(experiment_name, config, logger_kwargs, path_to_weights, itr=itr)
+    alpha_net = Mlp(
+        hidden_sizes=[policy_latent_dim * 10],
+        input_size=policy_latent_dim,
+        output_size=1
+    )
+
+    networks = {'encoder': encoder,
+                'decoder': decoder,
+                'qf1': qf1,
+                'qf2': qf2,
+                'target_qf1': target_qf1,
+                'target_qf2': target_qf2,
+                'policy': policy,
+                'alpha_net': alpha_net}
+
+    replay_buffer = StackedReplayBuffer(
+        variant['algo_params']['max_replay_buffer_size'],
+        time_steps,
+        variant['algo_params']['max_path_length'],
+        obs_dim,
+        action_dim,
+        policy_latent_dim,
+        variant['algo_params']['permute_samples'],
+        variant['algo_params']['encoding_mode'],
+        variant['algo_params']['sampling_mode']
+    )
+    replay_buffer_augmented = StackedReplayBuffer(
+        variant['algo_params']['max_replay_buffer_size'],
+        time_steps,
+        variant['algo_params']['max_path_length'],
+        obs_dim,
+        action_dim,
+        policy_latent_dim,
+        variant['algo_params']['permute_samples'],
+        variant['algo_params']['encoding_mode'],
+        variant['algo_params']['sampling_mode']
+    )
+    # exploration_replay_buffer = StackedReplayBuffer(
+    #     variant['algo_params']['max_replay_buffer_size'],
+    #     time_steps,
+    #     variant['algo_params']['max_path_length'],
+    #     obs_dim,
+    #     action_dim,
+    #     policy_latent_dim,
+    #     variant['algo_params']['permute_samples'],
+    #     variant['algo_params']['encoding_mode'],
+    #     variant['algo_params']['sampling_mode']
+    # )
+
+    # optionally load pre-trained weights
+    if variant['path_to_weights'] is not None:
+        itr = variant['showcase_itr']
+        path = variant['path_to_weights']
+        for name, net in networks.items():
+            try:
+                net.load_state_dict(torch.load(os.path.join(path, name + '_itr_' + str(itr) + '.pth'), map_location='cpu'))
+            except Exception as e:
+                if name == 'decoder' and variant['train_or_showcase'] != 'train':
+                    print(f'Loading weights for net {name} failed due to architecture mismatch. Skipping.')
+                else: raise ValueError(f'Loading weights for net {name} failed.')
+        print(f'Loaded weights "{variant["path_to_weights"]}"')
+        if os.path.exists(os.path.join(variant['path_to_weights'], 'stats_dict.json')):
+            with open(os.path.join(variant['path_to_weights'], 'stats_dict.json'), 'r') as f:
+                # Copy so not both changed during updates
+                d = npify_dict(json.load(f))
+                replay_buffer.stats_dict = d
+                replay_buffer_augmented.stats_dict = copy.deepcopy(d)
+        else:
+            if variant['algo_params']['use_data_normalization']:
+                raise ValueError('WARNING: No stats dict for replay buffer was found. '
+                                 'Stats dict is required for the algorithm to work properly!')
+
+    #Agent
+    # agent_class = ScriptedPolicyAgent if variant['env_params']['scripted_policy'] else Agent
+    if 'simple_env' not in variant:
+        variant['simple_env'] = False
+    if 'exploration' not in variant['algo_params'] :
+        variant['algo_params']['exploration'] = False
+    agent_class = Agent
+    agent = agent_class(
+        encoder,
+        policy,
+        use_sample=True if variant['algo_params']['sac_context_type']=='sample' else False,
+        simple_env=variant['simple_env']
+    )
+
+    # Rollout Coordinator
+    rollout_coordinator = RolloutCoordinator(
+        env,
+        variant['simple_env'],
+        variant['env_name'],
+        variant['env_params'],
+        variant['train_or_showcase'],
+        agent,
+        replay_buffer,
+        variant['algo_params']['exploration'],
+
+        variant['algo_params']['batch_size_rollout'],
+        time_steps,
+
+        variant['algo_params']['max_path_length'],
+        variant['algo_params']['permute_samples'],
+        variant['algo_params']['encoding_mode'],
+        variant['util_params']['use_multiprocessing'],
+        variant['algo_params']['use_data_normalization'],
+        variant['util_params']['num_workers'],
+        variant['util_params']['gpu_id'],
+        variant['env_params']['scripted_policy']
+        )
+    # if variant['algo_params']['exploration']:
+    #     rollout_coordinator = RolloutCoordinator(
+    #         env,
+    #         variant['simple_env'],
+    #         variant['env_name'],
+    #         variant['env_params'],
+    #         variant['train_or_showcase'],
+    #         agent,
+    #         replay_buffer,
+    #         variant['algo_params']['exploration'],
+
+    #         variant['algo_params']['batch_size_rollout'],
+    #         time_steps,
+
+    #         variant['algo_params']['max_path_length'],
+    #         variant['algo_params']['permute_samples'],
+    #         variant['algo_params']['encoding_mode'],
+    #         variant['util_params']['use_multiprocessing'],
+    #         variant['algo_params']['use_data_normalization'],
+    #         variant['util_params']['num_workers'],
+    #         variant['util_params']['gpu_id'],
+    #         variant['env_params']['scripted_policy'],
+    #         exploration_replay_buffer,
+    #         )
     
-    # RUN EXPERIMENT
-    algorithm.train()
+    reconstruction_trainer = AugmentedTrainer(
+        encoder,
+        decoder,
+        replay_buffer,
+        None,
+        variant['algo_params']['batch_size_reconstruction'],
+        num_classes,
+        latent_dim,
+        time_steps,
+        variant['reconstruction_params']['lr_decoder'],
+        variant['reconstruction_params']['lr_encoder'],
+        variant['reconstruction_params']['alpha_kl_z'],
+        variant['reconstruction_params']['beta_euclid'],
+        variant['reconstruction_params']['gamma_sparsity'],
+        variant['reconstruction_params']['regularization_lambda'],
+        variant['reconstruction_params']['use_state_diff'],
+        variant['env_params']['state_reconstruction_clip'],
+        variant['algo_params']['use_data_normalization'],
+
+        variant['reconstruction_params']['train_val_percent'],
+        variant['reconstruction_params']['eval_interval'],
+        variant['reconstruction_params']['early_stopping_threshold'],
+        experiment_log_dir,
+
+        variant['reconstruction_params']['use_regularization_loss'],
+
+        task_given,
+
+        use_PCGrad = variant['PCGrad_params']['use_PCGrad'],
+        PCGrad_option = variant['PCGrad_params']['PCGrad_option'],
+        optimizer_class = torch.optim.Adam,
+        log_dir=experiment_log_dir
+    )
+    # if variant['algo_params']['exploration']:
+    #     reconstruction_trainer = AugmentedTrainer(
+    #         encoder,
+    #         decoder,
+    #         exploration_replay_buffer,
+    #         None,
+    #         variant['algo_params']['batch_size_reconstruction'],
+    #         num_classes,
+    #         latent_dim,
+    #         time_steps,
+    #         variant['reconstruction_params']['lr_decoder'],
+    #         variant['reconstruction_params']['lr_encoder'],
+    #         variant['reconstruction_params']['alpha_kl_z'],
+    #         variant['reconstruction_params']['beta_euclid'],
+    #         variant['reconstruction_params']['gamma_sparsity'],
+    #         variant['reconstruction_params']['regularization_lambda'],
+    #         variant['reconstruction_params']['use_state_diff'],
+    #         variant['env_params']['state_reconstruction_clip'],
+    #         variant['algo_params']['use_data_normalization'],
+
+    #         variant['reconstruction_params']['train_val_percent'],
+    #         variant['reconstruction_params']['eval_interval'],
+    #         variant['reconstruction_params']['early_stopping_threshold'],
+    #         experiment_log_dir,
+
+    #         variant['reconstruction_params']['use_regularization_loss'],
+
+    #         use_PCGrad = variant['PCGrad_params']['use_PCGrad'],
+    #         PCGrad_option = variant['PCGrad_params']['PCGrad_option'],
+    #         optimizer_class = torch.optim.Adam,
+    #         log_dir=experiment_log_dir
+    #     )
+
+
+    # PolicyTrainer
+    policy_trainer = PolicyTrainer(
+        policy,
+        qf1,
+        qf2,
+        target_qf1,
+        target_qf2,
+        alpha_net,
+        encoder,
+
+        replay_buffer,
+        replay_buffer_augmented,
+        variant['algo_params']['batch_size_policy'],
+        action_dim,
+        'tree_sampling',
+        variant['algo_params']['use_data_normalization'],
+
+        use_automatic_entropy_tuning=variant['algo_params']['automatic_entropy_tuning'],
+        target_entropy_factor=variant['algo_params']['target_entropy_factor'],
+        alpha=variant['algo_params']['sac_alpha'],
+
+        use_PCGrad=variant['PCGrad_params']['use_PCGrad'],
+        PCGrad_option=variant['PCGrad_params']['PCGrad_option'],
+
+        context_type=variant['algo_params']['sac_context_type']
+    )
+
+    algorithm = TrainingAlgorithm(
+        replay_buffer,
+        replay_buffer_augmented,
+        rollout_coordinator,
+        reconstruction_trainer,
+        policy_trainer,
+        agent,
+        networks,
+
+        train_tasks,
+        test_tasks,
+        variant['task_distribution'],
+
+        latent_dim,
+        num_classes,
+        variant['algo_params']['use_data_normalization'],
+
+        variant['algo_params']['num_train_epochs'],
+        variant['showcase_itr'] if variant['path_to_weights'] is not None else 0,
+        variant['algo_params']['num_training_steps_reconstruction'],
+        variant['algo_params']['num_training_steps_policy'],
+        variant['algo_params']['num_train_tasks_per_episode'],
+        variant['algo_params']['num_transitions_per_episode'],
+
+        variant['algo_params']['augmented_start_percentage'],
+        variant['algo_params']['augmented_every'],
+        variant['algo_params']['augmented_rollout_length'],
+        variant['algo_params']['augmented_rollout_batch_size'],
+
+        variant['algo_params']['num_eval_trajectories'],
+        variant['algo_params']['test_evaluation_every'],
+        variant['algo_params']['num_showcase'],
+
+        experiment_log_dir,
+        name2number
+        )
+
+    if ptu.gpu_enabled():
+        algorithm.to()
+
+    # debugging triggers a lot of printing and logs to a debug directory
+    DEBUG = variant['util_params']['debug']
+    PLOT = variant['util_params']['plot']
+    os.environ['DEBUG'] = str(int(DEBUG))
+    os.environ['PLOT'] = str(int(PLOT))
+
+    # create temp folder
+    if not os.path.exists(variant['reconstruction_params']['temp_folder']):
+        os.makedirs(variant['reconstruction_params']['temp_folder'])
+
+    # run the algorithm
+    if variant['train_or_showcase'] == 'train':
+        algorithm.train()
+        algorithm.showcase_task_inference()
+    elif variant['train_or_showcase'] == 'showcase_all':
+        algorithm.showcase_all()
+    elif variant['train_or_showcase'] == 'showcase_task_inference':
+        algorithm.showcase_task_inference()
+    elif variant['train_or_showcase'] == 'showcase_non_stationary_env':
+        algorithm.showcase_non_stationary_env()
+
+
+def npify_dict(d: dict):
+    for k, v in d.items():
+        if type(v) is dict:
+            d[k] = npify_dict(v)
+        else:
+            d[k] = np.asarray(v)
+    return d
+
+
+def deep_update_dict(fr, to):
+    ''' update dict of dicts with new values '''
+    # assume dicts have same keys
+    for k, v in fr.items():
+        if type(v) is dict:
+            deep_update_dict(v, to[k])
+        else:
+            to[k] = v
+    return to
+
+
+@click.command()
+@click.option('--config', default=None)
+@click.option('--name', default='')
+@click.option('--ti_option', default='')
+@click.option('--gpu', default=None)
+@click.option('--num_workers', default=None)
+@click.option('--use_mp', is_flag=True, default=None)
+def click_main(config, name, ti_option, gpu, use_mp, num_workers):
+    main(config, name, ti_option, gpu, use_mp, num_workers)
+
+
+def main(config=None, name='', ti_option='', gpu=None, use_mp=None, num_workers=None):
+    variant = toy_config
+
+    if config:
+        with open(os.path.join(config)) as f:
+            exp_params = json.load(f)
+        variant = deep_update_dict(exp_params, variant)
+
+    # Only set values from input if they are actually inputted
+    variant['inference_option'] = variant['inference_option'] if ti_option == '' else ti_option
+    variant['util_params']['exp_name'] = f'{os.path.splitext(os.path.split(config)[1])[0].replace("-", "_") if config is not None else "default"}_' + variant['inference_option'] + (f'_{name}' if name != '' else f'')
+
+    variant['util_params']['use_gpu'] = variant['util_params']['use_gpu'] if gpu != '' else False
+    variant['util_params']['gpu_id'] = variant['util_params']['gpu_id'] if gpu is None else gpu
+    variant['util_params']['use_multiprocessing'] = variant['util_params']['use_multiprocessing'] if use_mp is None else use_mp
+    variant['util_params']['num_workers'] = variant['util_params']['num_workers'] if num_workers is None else int(num_workers)
+
+    experiment(variant)
 
 
 if __name__ == "__main__":
-    import argparse
-    import importlib
-    from distutils.util import strtobool
-
-    # Parse arguments
-    arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("environment", help="Environment factory function, see 'configs/environment_factory.py'. Use python notation, e.g. \"configs.environment_factory.toy1d\"")
-    arg_parser.add_argument("config", help="The config dictionary, use python notation, e.g. \"configs.base_configuration.config\"", type=str)
-    arg_parser.add_argument("--log_dir", help="Log directory", default="data/")
-    arg_parser.add_argument("--gpu", help="List of available GPUs (see nvidia-smi)", type=str, default="")
-    arg_parser.add_argument("--multithreading", help="Enable/disable multithreading", type=strtobool, default="True")
-    arg_parser.add_argument("--save_env", help="Enable/disable environment saving in log parameters", type=strtobool, default="False")
-    arg_parser.add_argument("--weights", help="Path to pretrained weights", type=str, default=None)
-    arg_parser.add_argument("--itr", help="Iteration of pretrained weights", type=int, default=None)
-    arg_parser.add_argument("--verbose", help="Enable/disable (most of) the terminal outputs", type=strtobool, default="True")
-    arg_parser.add_argument("--temp_dir", help="Temporary directory for ray", type=str, default=None)
-    args = arg_parser.parse_args()    
-
-    # Load environment factory function (import module and function)
-    factory_name = args.environment.split(".")[-1]
-    module_name = args.environment.removesuffix("." + factory_name)
-    module = importlib.import_module(module_name)
-    environment_factory = getattr(module, factory_name)
-    
-    # Load config dictionary (import config module and import config name)
-    config_name = args.config.split(".")[-1]
-    module_name = args.config.removesuffix("." + config_name)
-    module = importlib.import_module(module_name)
-    config = getattr(module, config_name)
-
-    main(
-        environment_factory=environment_factory,
-        config=config, 
-        log_dir=args.log_dir,
-        gpu=args.gpu, 
-        multithreading=bool(args.multithreading),
-        save_env=bool(args.save_env),
-        path_to_weights=args.weights, 
-        verbose=bool(args.verbose),
-        temp_dir=args.temp_dir,
-    )
+    click_main()

@@ -169,7 +169,13 @@ class PolicyNetwork(nn.Module):
             init_weight(self.log_std, initializer="xavier uniform")
             self.log_std.bias.data.zero_()
 
-        self.action_selector = nn.Linear(list(self.children())[-3].out_features, self.n_actions)  # 2 joints
+        self.action_selector = nn.Sequential(
+            nn.Linear(list(self.children())[-3].out_features + task_dim, 300),
+            nn.ReLU(),  # Non-linearity
+            nn.Linear(300, 300),
+            nn.ReLU(),  # Non-linearity
+            nn.Linear(300, self.n_actions)
+        )
         self.sigmoid = nn.Sigmoid()
         self.tanh = nn.Tanh()
 
@@ -193,13 +199,16 @@ class PolicyNetwork(nn.Module):
 
     def sample_or_likelihood(self, states, tasks, max_action=False, sigmoid=False):
         if sigmoid:
+            if max_action:
+                dist = self(states, tasks, max_action, sigmoid=True)
+                action_selector_input = torch.cat((self.x, tasks), dim=-1)  # Concatenate self.x and tasks
+                m = torch.argmax(nn.functional.softmax(self.action_selector(action_selector_input), dim=-1))
+                return dist, m
             return self(states, tasks, max_action, sigmoid=True), None
         dist = self(states, tasks, max_action)
         # Reparameterization trick
         u = dist.rsample()
         action = torch.tanh(u)
-        if max_action:
-            m = torch.argmax(nn.functional.softmax(self.action_selector(self.x), dim=-1))
         log_prob = dist.log_prob(value=u)
         # Enforcing action bounds
         log_prob -= torch.log(1 - action ** 2 + 1e-6)
