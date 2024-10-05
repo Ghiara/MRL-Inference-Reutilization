@@ -12,6 +12,7 @@ nohup.out
 
 
 ### Directories ###
+failed_experiments/
 Dockerfile
 data/*
 output/
