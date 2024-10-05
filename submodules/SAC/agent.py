@@ -1,7 +1,7 @@
 import numpy as np
 from model import PolicyNetwork, QvalueNetwork, ValueNetwork
 import torch
-from replay_memory import Memory, Transition
+from various_experiments.replay_memory import Memory, Transition
 from torch import from_numpy
 from torch.optim.adam import Adam
 import matplotlib.pyplot as plt

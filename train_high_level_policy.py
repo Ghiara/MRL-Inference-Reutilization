@@ -19,7 +19,7 @@ import imageio
 import rlkit.torch.pytorch_util as ptu
 from tigr.task_inference.prediction_networks import DecoderMDP, ExtendedDecoderMDP
 import matplotlib.pyplot as plt
-from replay_memory import Memory
+from various_experiments.replay_memory import Memory
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
