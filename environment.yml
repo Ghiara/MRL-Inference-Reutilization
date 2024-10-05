@@ -1,4 +1,4 @@
-name: smrl
+name: inference-reutilization
 channels:
   - pytorch
   - nvidia
