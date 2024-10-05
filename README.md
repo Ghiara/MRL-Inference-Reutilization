@@ -8,7 +8,7 @@ This project builds upon [RLKIT][RLKIT].
 
 In this project, we implement methods to train an agent which can act reasonably in meta-environments, i.e. environments which may have varying transition dynamics or reward functions - described by **tasks**. For this, the agent adapts to the current task by inferring a compact representation of it from few recent transition samples. This lets it modify its behavior within a small number of transitions.
 
-This project is related to previous work, including work by Kate Rakelly et al. [1], David Lerch [2], Lukas Knak [3], Philipp Widmann [4], Jonas Jürß [5], Durmann [6].
+This project is related to previous work, including work by Kate Rakelly et al. [1], David Lerch [2], Lukas Knak [3], Philipp Widmann [4], Jonas Jürß [5], **Durmann** [6], **Bing et al.** [9]
 
 For more information about the theoretical background, please refer to my Master's thesis [8] and to the references.
 
