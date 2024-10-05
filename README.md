@@ -1,11 +1,14 @@
-# Inference-based Meta-Reinforcement-Learning
-Meta-Reinforcement Learning with an encoder module which infers tasks from contexts.
+# Meta-Reinforcement-Learning Through Task Inference Reutilization
+Meta-Reinforcement Learning with an encoder module which infers tasks from contexts. Idea is to train the task inference module on a simple agent depicted below and transfer it to more complex agents from the mujoco environment. The method has been tested on the agents shown below.
+| ![Image 1](images/toy.pdf) | ![Image 2](images/cheetah.pdf) | ![Image 3](images/walker.pdf) | ![Image 4](images/hopper.pdf) |
+|:-----------------------------:|:-----------------------------:|:-----------------------------:|:-----------------------------:|
+| **Toy**                   | **Cheetah**                   | **Walker**                   | **Hopper**                   |
 
 This project builds upon [RLKIT][RLKIT].
 
 In this project, we implement methods to train an agent which can act reasonably in meta-environments, i.e. environments which may have varying transition dynamics or reward functions - described by **tasks**. For this, the agent adapts to the current task by inferring a compact representation of it from few recent transition samples. This lets it modify its behavior within a small number of transitions.
 
-This project is related to previous work, including work by Kate Rakelly et al. [1], David Lerch [2], Lukas Knak [3], Philipp Widmann [4], and Jonas Jürß [5].
+This project is related to previous work, including work by Kate Rakelly et al. [1], David Lerch [2], Lukas Knak [3], Philipp Widmann [4], Jonas Jürß [5], Durmann [6].
 
 For more information about the theoretical background, please refer to my Master's thesis [8] and to the references.
 
@@ -347,6 +350,9 @@ http://proceedings.mlr.press/v97/rakelly19a.html.
 [7] Symmetrizer:  https://github.com/ElisevanderPol/symmetrizer/
 
 [8] Durmann, J. (2023) Meta-Reinforcement Learning. Master's thesis. Technical University of Munich.
+
+[9] Bing et al. (2024) Context-Based Meta-Reinforcement Learning With Bayesian Nonparametric Models
+
 
 
 <!--This part is for links only and won't be displayed in Markdown previews-->
