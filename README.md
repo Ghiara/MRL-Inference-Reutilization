@@ -1,40 +1,14 @@
 # Meta-Reinforcement-Learning Through Task Inference Reutilization
-Meta-Reinforcement Learning with an encoder module which infers tasks from contexts. Idea is to train the task inference module on a simple agent depicted below and transfer it to more complex agents from the mujoco environment. The method has been tested on the agents shown below.
+Meta-Reinforcement Learning with an encoder module which infers tasks from contexts. Idea is to train the task inference module on a simple agent (toy) depicted below and transfer it to more complex agents from the mujoco environment. The method has been tested on the agents shown below.
 | ![Image 1](images/toy.png) | ![Image 2](images/cheetah.png) | ![Image 3](images/walker.png) | ![Image 4](images/hopper.png) |
 |:-----------------------------:|:-----------------------------:|:-----------------------------:|:-----------------------------:|
 | **Toy**                   | **Cheetah**                   | **Walker**                   | **Hopper**                   |
 
-This project builds upon [RLKIT][RLKIT].
-
-In this project, we implement methods to train an agent which can act reasonably in meta-environments, i.e. environments which may have varying transition dynamics or reward functions - described by **tasks**. For this, the agent adapts to the current task by inferring a compact representation of it from few recent transition samples. This lets it modify its behavior within a small number of transitions.
+This project implements the algorithm decribed in [this thesis](Master_Thesis_Juan_final.pdf) in which an inference-based Meta Reinforcement Learning algorithm was trained in the toy environment and then reused in a more complex agent. In order to transfer the knowledge trained on the simple agent, a hierarchical policy structure is implemented. The tasks for which this method has been tested are reaching a position, running at a velocity and standing at an angle. The Meta Reinforcement Learning algorithm used in described in [9] ([melts](https://github.com/Ghiara/MELTS)).
 
 This project is related to previous work, including work by Kate Rakelly et al. [1], David Lerch [2], Lukas Knak [3], Philipp Widmann [4], Jonas Jürß [5], **Durmann** [6], **Bing et al.** [9]
 
-For more information about the theoretical background, please refer to my Master's thesis [8] and to the references.
-
-
-## Contents
-1. [Installation](#installation)
-    1. [Cloning](#cloning)
-    2. [Environment](#environment)
-    3. [Submodules](#submodules)
-    4. [Locally install SMRL package](#locally-install-smrl-package)
-2. [Run code](#run-code)
-    1. [Easy start: sample script *run_experiment.py*](#easy-start-sample-script-run_experimentpy)
-    2. [Configurations](#configurations)
-    3. [Environment factory functions](#environment-factory-functions)
-    4. [Function *setup_experiment*](#function-setup_experiment)
-    5. [Multithreading](#multithreading)
-    6. [Restrict GPU useage](#restrict-gpu-usage)
-3. [Runner script (console interface)](#runner-script-console-interface)
-4. [Code](#code)
-5. [Docker](#docker)
-    1. [Installation](#docker-installation)
-    2. [Docker image](#create-docker-image)
-    3. [Run container](#run-container-interactively)
-6. [Testing environment](#testing-environment)
-7. [Known issues](#known-issues)
-8. [References](#references)
+For more information about the theoretical background, please refer to my Master's thesis and to the references.
 
 ----------------------------------------------------------------------------
 
@@ -43,7 +17,7 @@ For more information about the theoretical background, please refer to my Master
 Go to the GitHub repository website and select 'Code' to get an HTTPS or SSH link to the repository.
 Clone the repository to your device, e.g.
 ```bash
-git clone git@github.com:juldur1/Symmetric-Meta-Reinforcement-Learning.git
+https://github.com/juandelos/MRL-Inference-Reutilization.git
 ```
 Enter the root directory of this project on your device. The root directory contains this README-file.
 
@@ -53,8 +27,6 @@ We recommend to manage the python environment with **conda** and suggest [Minico
 
 > You may also use different environment tools such as python's *venv*. Please refer
 to *requirements.txt* in this case. In the following, we will proceed with conda.
-
-> If you prefer to use *Docker*, skip the following steps and proceed with [this section](#docker).
 
 Install the environment using the ``conda`` command:
 ```bash
@@ -72,7 +44,7 @@ This might take some time because it needs to download and install all required 
 
 Activate the new environment by running (Make sure that no other environment was active before.):
 ```bash
-conda activate SMRL
+conda activate inference-reutilization
 ```
 
 In case you need to update an existing environment, you can run
@@ -81,24 +53,15 @@ conda env update --file environment.yml
 ```
 
 ### Submodules
-Initialize the submodules and download their code.
-```bash
-git submodule init
-git submodule update
-```
 
 Install the submodules:
 ```bash
-pip install -e ./submodules/meta-environments
-pip install -e ./submodules/MRL-analysis-tools
-pip install -e ./submodules/rlkit
-pip install -e ./submodules/symmetrizer     
+pip install -e ./submodules/<submodule>   
 ```
 You only need the last submodule if you want to use equivariant networks.
 
-### Locally install SMRL package
-Similar to the submodules, the SMRL package also needs to be installed locally.
-This step ensures that the package can be referenced as any other python package.
+### Locally install package
+Install package locally.
 
 Please run (from the root directory):
 ```batch
@@ -108,8 +71,6 @@ pip install -e .
 By running `conda list` you can check if all packages have been installed successfully.
 
 ### MuJoCo
-
-MuJoCo is only required if you want to run MuJoCo environments such as Half-Cheetah and Ant. If you do not want to use them, make sure to comment or delete MuJoCo references in *configs/environment_factory.py* (and some other files...).
 
 For running MuJoCo environments, you will need the MuJoCo library binaries which you can download from [here](https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz). You should extract them in the directory */root/.mujoco/mujoco210*. Additionally, you need to set the variable *LD_LIBRARY_PATH* to contain the path to the binaries:
 
@@ -129,206 +90,46 @@ pip install mujoco-py
 
 ## Run code
 
-### Easy start: sample script *run_experiment.py*
-The script *run_experiment.py* provides a small working example. 
-It ...
+There are three parts to the method.
 
-1. ... imports a [configuration dictionary](#configurations)
-2. ... sets the environment factory function
-3. ... checks for GPU availability and initializes multithreading
-4. ... sets logger arguments
-5. ... instantiates all networks and the training algorithm (see [here](#function-setup_experiment))
-6. ... starts training
-
-You can modify the code to start your own experiments.
-
-### Configurations
-Configuration dictionaries serve as a tool to describe experiments.
-They ...
-
-1. ... determine which networks are used
-2. ... determine which inference mechanism is used
-3. ... set arguments for networks
-4. ... set arguments for trainers and the algorithm
-5. ... etc.
-
-These dictionaries must contain some required key-value pairs and may contain optional key-value pairs. You can find a definition of the dictionary layout in [*smrl/experiment/experiment_setup.py*](smrl/experiment/experiment_setup.py) (see for dictionary ``base_config``). 
-
-For convenience, you can create a python file with the dictionary. Feel free to have a look at the provided configuration files (which contain dictionaries) in *./configs/*.
-
-It is worth mentioning that many of the entries in the dictionaries are *types* (classes). This hopefully makes them easier to read and allows to get hints to the classes in many code editors.
-
-### Environment factory functions
-Environment factory functions are a part of configuration dictionaries. They tell the algorithm setup functionality which environments are used for exploration during training and evaluation. The must follow the signature
-```python
-def environment_factory_function() -> Tuple[MetaEnv, MetaEnv]:
-    # ...
-    return expl_env, eval_env
-```
-For an example of such functions, refer to [*configs/environment_factory.py*](configs/environment_factory.py).
-
-### Function ``setup_experiment()``
-The function ``setup_experiment()`` (located in [*smrl/experiment/experiment_setup.py*](smrl/experiment/experiment_setup.py)) sets up all networks and mechanisms which are required for training:
-1. Networks for SAC-training (policy and value functions)
-2. Networks for inference training (encoder and decoder)
-3. Rollout utility and data buffers
-4. Trainers for policy (SAC) and inference mechanism
-5. Algorithm
-
-It returns an instance of ``MetaRlAlgorithm`` which can be directly used for training.
-
-### Multithreading
-The SMRL package supports multithreaded trajectory rollouts with `ray` ([ray documentation](https://docs.ray.io/en/latest/index.html)).
-To use this functionality, include
-```python
-import os
-os.environ["MULTITHREADING"] = "True"
-```
-before calling ``setup_experiment()``. The setup utility then automatically initializes ray and all components of the code know about multithreading.
-
-### Restrict GPU usage
-In case you have multiple GPUs available and only use some of them, you can add the following to the top of your python script:
-```python
-import os
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="<device id, e.g. 0>"
-```
-The first command ensures that the internal listing of GPUs is the same as with the ``nvidia-smi`` command. To list available GPUs and their current load, you can run
+### 1. Train the toy
+Update the config under configs/toy_config.py if necessary. Start the training with
 ```bash
-nvidia-smi --query-gpu=name,utilization.gpu,utilization.memory --format=csv
+python runner.py
 ```
+This will save the results in the folder output.
 
-## Runner script (console interface)
-There is also a runner script which can be called from a console. You can start training with the following command:
+### 2. Train low-level policy for new agent
+Parallely train the low-level-controller. Important file is train_low_level_policy.py. In that file, import the config from submodules/SAC/env_configs. This defines which experiment to start. Then run the file with 
 ```bash
-python runner.py <environment> <configuration>
+python train_low_level_policy.py
 ```
-The argument ``<environment>`` should point towards an environment factory function while ``<configuration>`` declares which configuration dictionary to use. Both arguments should be passed in **python import notation**, e.g. ``"configs.base_configuration.config"``. They will be parsed internally and the referenced python object will be imported. Additional parameters exist as well which allow to select directories for storing results, managing gpu usage, etc. 
+The results will be saved in the folder output/low_level_policy.
 
-For more information, use
-```bash
-python runner.py --help
-```
-
-----------------------------------------------------------------------------
-
-## Code
-<!-- tree ./smrl -d -L 1 -->
-```
-./smrl
-├── algorithms
-├── data_management
-├── environments
-├── experiment
-├── policies
-├── trainers
-├── utility
-└── vae
-```
-
-For information about the code, please refer to the readme-file in folder *smrl*.
-
-
-----------------------------------------------------------------------------
-
-## Docker
-[Docker](https://www.docker.com/) provides utilities to run applications in separate *containers*. If you are mainly interested in *running* the code and *code modification* is *not* your primary interest, you may prefer this installation method. The steps below will guide you towards creating a Docker container which can run the code from this package.
-
-### Docker installation
-Please visit the [Docker website](https://www.docker.com/) and follow the installation instructions.
-
-### Submodules
-Initialize the submodules and download their code such that they can be copied to the docker image in the next step.
-```bash
-git submodule init
-git submodule update
-```
-
-### Create Docker image
-A container is a running instance of an image. With the help of the *Dockerfile*, you can create your own image. 
-
-> NOTE: In order to use GPU-accelerated training, follow the instructions in *requirements.txt*!
-
-To do so, run
+### 3. To transfer the knowledge there are two possibilities
+#### 3.1 Reuse the policy from the toy as the high-level policy
+If more than one task should be learned, the striding predictor should be learned. First update the inference path with the path from the toy training and the complex_agent_config with the output from the low-level policy training. (Idea: learn the striding predictor with the low-level controller)
 
 ```bash
-docker build -t smrl .
+python train_striding_predictor.py
 ```
 
-NOTE: This step may take some time as it sets up an operating system and a python environment, including all the required packages.
-
-You can check if the image has been created successfully by running
-```bash
-docker image ls
-```
-
-To check the installation, run the image by calling
-```bash
-docker run smrl
-```
-This should trigger *check_setup.py* which tests if all required packages are successfully installed.
-
-
-### Run container interactively
-Create a directory for data, name *data/* in the projects root directory. This directory will be mounted by the running containers at */data/* such that data is always available. 
-
-After the image has been created, you can run an interactive container by executing
-```bash
-docker run -i -t --mount type=bind,source="$(pwd)"/data,target=/data smrl bash
-```
-
-> NOTE: If you are on Windows, replace ``$(pwd)`` by ``%cd%``!
-
-You should be prompted with a linux console in directory */home/Symmetric-Meta-Reinforcement-Learning*. From this console, you can execute any python script by calling
+#### 3.2 Relearn the high-level policy
+The other option is to learn the high-level policy from scratch. Also here, the inference path and the complex_agent_config have to be updated. Then run the training.
 
 ```bash
-python <script.py>
+python train_high_level_policy.py
 ```
 
-Remember to set the storage directory to */data/* if you want to have persistent data which is also available at the host system. In interactive mode, you may also copy any data to or from this directory in order to access information from the host system or provide results.
 
-> NOTE: The Docker image is not updated automatically when you modify anything in the package directory. You will need to recreate the image before changes are applied. Also be aware that any changes within the Docker container will not be available once the container is shut down. 
+## Troubleshooting
 
-You can keep track over running and stopped containers by executing
-```bash
-docker container ls -a
-```
-
-> NOTE: Every time you run ``docker run`` you create and start a new container from the image. Over time, there thus may be many unused containers of the *smrl* image. Consider deleting them as you like.
-
-
-----------------------------------------------------------------------------
-
-## Testing environment
-- Windows Subsystem for Linux:
-    - Windows 10 Home, Version 22H2 (host system)
-    - Ubuntu Ubuntu 20.04.5 LTS
-    -   | System specifications |                               |
-        | --------- | ---------------------------------------   |
-        | Processor | Intel(R) Core(TM) i5-7200U CPU @ 2.50GHz  |
-        | RAM       |   8 GB                                    |
-        | GPU       | -                                         |
-- Ubuntu (server):
-    - Ubuntu 18.04.3 LTS
-    -   | System specifications |                               |
-        | --------- | ---------------------------------------   |
-        | Processor | Intel(R) Xeon(R) Gold 6134 CPU @ 3.20GHz  |
-        | RAM       |   252 GB                                  |
-        | GPU       | NVIDIA Tesla V100-PCIE-32GB               |
-
-----------------------------------------------------------------------------
-
-## Known issues
-
-### Multithreading incompatible with symmetrizer networks
-Symmetrizer networks are not compatible with multithreading. An error which states
-that objects cannot be deserialized to CUDA is raised.
-
-### Multithreading incompatible / inefficient with MuJoCo simulations
-Using multithreading with ``ray`` when the environment is simulated by MuJoCo
-is slow and inefficient. Over time, the memory usage grows. We recommend disabling
-multithreading (see [Multithreading](#multithreading)) since MuJoCo seems to have
-its internal hardware management.
+1. In case you get the error: RuntimeError: Failed to initialize OpenGL
+   
+   Solve with following command:
+   ```bash
+   unset LD_PRELOAD
+   ```
 
 ----------------------------------------------------------------------------
 
