@@ -1,6 +1,6 @@
 # Meta-Reinforcement-Learning Through Task Inference Reutilization
 Meta-Reinforcement Learning with an encoder module which infers tasks from contexts. Idea is to train the task inference module on a simple agent depicted below and transfer it to more complex agents from the mujoco environment. The method has been tested on the agents shown below.
-| ![Image 1](images/toy.pdf) | ![Image 2](images/cheetah.pdf) | ![Image 3](images/walker.pdf) | ![Image 4](images/hopper.pdf) |
+| ![Image 1](images/toy.png) | ![Image 2](images/cheetah.png) | ![Image 3](images/walker.png) | ![Image 4](images/hopper.png) |
 |:-----------------------------:|:-----------------------------:|:-----------------------------:|:-----------------------------:|
 | **Toy**                   | **Cheetah**                   | **Walker**                   | **Hopper**                   |
 
