@@ -1,5 +1,5 @@
 from typing import Dict, Any
-import runner
+import run_toy_training
 
 def run_experiment(
     config: Dict[str, Any], 
@@ -10,7 +10,7 @@ def run_experiment(
     log_epoch_gap: int = 50,
     log_dir: str = '/home/ubuntu/juan/Meta-RL/data',
 ):
-    runner.main(
+    run_toy_training.main(
         environment_factory=config['environment_factory'], 
         config=config, 
         log_dir=log_dir,

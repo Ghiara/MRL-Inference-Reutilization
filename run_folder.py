@@ -1,7 +1,7 @@
 import multiprocessing
 import os, sys
 import numpy as np
-import runner
+import run_toy_training
 import time
 
 
@@ -64,7 +64,7 @@ def run_process(c_list: list, gpu_nr: str, process_nr=0):
         write_file(os.path.join(*os.path.split(conf)[:-1]), f'{process_nr}', conf, 'p')
 
         with HiddenPrints():
-            runner.main(config=conf, name='', ti_option='', gpu=gpu_nr, use_mp=None, num_workers=None)
+            run_toy_training.main(config=conf, name='', ti_option='', gpu=gpu_nr, use_mp=None, num_workers=None)
 
         t_list.append(time.time() - t)
         t = time.time()

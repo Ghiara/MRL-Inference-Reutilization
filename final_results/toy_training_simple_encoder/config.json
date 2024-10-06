@@ -1,0 +1,125 @@
+{
+    "action_dim": 1,
+    "algorithm_kwargs": {
+        "batch_size": 128,
+        "max_path_length": 250,
+        "num_epochs": 5000,
+        "num_eval_paths_per_epoch": 15,
+        "num_expl_paths_per_epoch": 10,
+        "num_inference_paths_per_epoch": 10,
+        "num_inference_trains_per_train_loop": 5,
+        "num_policy_trains_per_train_loop": 10,
+        "num_train_loops_per_epoch": 20,
+        "prediction_target_size": 5
+    },
+    "context_size": 5,
+    "decoder_kwargs": {
+        "activation_function": {
+            "$class": "torch.nn.modules.activation.ReLU"
+        },
+        "hidden_sizes": [
+            8,
+            8
+        ],
+        "std_obs": 0.1,
+        "std_rew": 0.1
+    },
+    "decoder_type": {
+        "$class": "smrl.vae.decoder_networks.SeparateMlpDecoder"
+    },
+    "description": {
+        "file": "/home/ubuntu/juan/Meta-RL/configs/base_configuration.py",
+        "inference": "-",
+        "name": "Base-config",
+        "policy training": "-",
+        "variant": "Base configuration"
+    },
+    "encoder_decorator_kwargs": {},
+    "encoder_decorator_type": null,
+    "encoder_kwargs": {
+        "encoding_mode": "sample",
+        "hidden_size": 32,
+        "num_layers": 4
+    },
+    "encoder_type": {
+        "$class": "smrl.vae.encoder_networks.gru.GRUEncoder"
+    },
+    "encoding_dim": 1,
+    "environment_factory": {
+        "$function": "configs.environment_factory.toy1d"
+    },
+    "expl_policy_kwargs": {},
+    "expl_policy_type": null,
+    "inference_network_kwargs": {
+        "beta": 1.0
+    },
+    "inference_network_type": {
+        "$class": "smrl.vae.mdpvae.NeuralProcess"
+    },
+    "inference_policy_kwargs": {
+        "action_update_interval": 25,
+        "mean_std": 0.05,
+        "std_mean": 0.025
+    },
+    "inference_policy_type": {
+        "$class": "smrl.policies.exploration.RandomMemoryPolicy"
+    },
+    "inference_replay_buffer_kwargs": {
+        "max_replay_buffer_size": 50000,
+        "max_sub_size": 2500,
+        "randomize_contexts": false,
+        "randomize_targets": true
+    },
+    "inference_replay_buffer_type": {
+        "$class": "smrl.data_management.replay_buffers.multitask_replay_buffer.MultiTaskReplayBuffer"
+    },
+    "inference_trainer_kwargs": {
+        "clipping": null,
+        "lr": 0.0003,
+        "n_latent_samples": 32
+    },
+    "latent_dim": 1,
+    "observation_dim": 1,
+    "path_collector_kwargs": {
+        "save_env_in_snapshot": false
+    },
+    "policy_kwargs": {
+        "hidden_sizes": [
+            64,
+            64,
+            64,
+            64
+        ]
+    },
+    "policy_trainer_kwargs": {
+        "discount": 0.99,
+        "encoder_lr": null,
+        "policy_lr": 0.0003,
+        "qf_lr": 0.0003,
+        "use_automatic_entropy_tuning": false
+    },
+    "policy_type": {
+        "$class": "smrl.policies.meta_policy.MetaRLTanhGaussianPolicy"
+    },
+    "qf_network_kwargs": {
+        "hidden_sizes": [
+            64,
+            64,
+            64,
+            64
+        ]
+    },
+    "qf_network_type": {
+        "$class": "smrl.policies.meta_value_function.MlpValueFunction"
+    },
+    "replay_buffer_kwargs": {
+        "max_path_number": 1000,
+        "max_replay_buffer_size": 1000,
+        "max_sub_size": 300,
+        "randomize_contexts": false,
+        "randomize_targets": false
+    },
+    "replay_buffer_type": {
+        "$class": "smrl.data_management.replay_buffers.trajectory_replay_buffer.TrajectoryReplayBuffer"
+    }
+}

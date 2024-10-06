@@ -10,7 +10,7 @@ Date:
     2023-01-22
 """
 
-from runner import main
+from run_toy_training import main
 
 from configs.environment_factory import *
 from configs.base_configuration import config
