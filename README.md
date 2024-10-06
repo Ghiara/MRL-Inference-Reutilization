@@ -136,8 +136,6 @@ Some utility scripts are stored under the vis_utils folder. The training of the 
 ### Alternative: Run only parametric task variations with encoder consisting of GRUs
 In case a simple encoder is to be used, the implementation by Durmann can be used. To do so train the toy agent with the script run_experiment.py in the subfolder Meta_RL. Then the inference reutilization can be tested with the script new_model_eval.py. There you have to choose the low-level policy and the inference mechanism trained on the toy.
 
-# TODO: FINAL RESULTS FOLDER, GO THROUGH SAC ALGOS..., Readme with plots in final results folder
-
 ## Troubleshooting
 
 1. In case you get the error: RuntimeError: Failed to initialize OpenGL
