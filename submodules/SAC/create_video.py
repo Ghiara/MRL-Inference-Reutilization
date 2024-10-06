@@ -27,11 +27,7 @@ from typing import List, Any, Dict, Callable
 
 from mrl_analysis.video.video_creator import VideoCreator
 import imageio
-# from experiments_configs.half_cheetah_multi_env import config as env_config
-# from experiments_configs.walker_multi import config as env_config
 import json
-
-# from transfer_function.transfer_configs.hopper_config import config
 
 config = dict(
     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
@@ -114,56 +110,20 @@ def create_video():
     video_dir = "/home/ubuntu/juan/Meta-RL/evaluation/videos_of_transfer/"
     os.makedirs(os.path.dirname(video_dir), exist_ok=True)
     frames = []
-    # simple_action = np.random.rand()
-    # task = np.array([.0,0,0,-2.0,0])
-    task = np.array([5.0,.0])
     env.update_task(task)
-    # task = np.expand_dims(task, axis=0)
     task = from_numpy(task).float().to(device)
     for i in range(traj_len):
-        # obs = np.expand_dims(obs, axis=0)
         obs = from_numpy(obs).float().to(device)
         action,_ = transfer_function.sample_or_likelihood(obs, task)
-        # action = action[0]
-        # action = env.action_space.sample()
         next_obs, reward, terminal, _, info = env.step(action.detach().cpu().numpy())
-        # next_obs, reward, terminal, _, info = env.step(action)
-        # if i == 10:
-        #     simple_action = 0.3
-        # if i == 30:
-        #     simple_action = -0.3
-        # if i == 200:
-        #     task = torch.Tensor([6,0,0,0,0])
         if i == 200:
             task = np.array([.3, 0])
             env.update_task(task)
-        #     # task = np.expand_dims(task, axis=0)
             task = from_numpy(task).float().to(device)
             print('change oof task')
-        # if i == 600:
-        #     task = np.array([.1, 0])
-        #     env.update_task(task)
-        #     # task = np.expand_dims(task, axis=0)
-        #     task = from_numpy(task).float().to(device)
-        #     print('change oof task')
         print('X:',i, next_obs[-3:], reward)
         print('terminal:', terminal)
         print('vel:', env.sim.data.qvel[0])
-        # if np.abs(env.sim.data.qpos[2])>2*np.pi:
-        #     break
-        # if i == 250:
-        #     task = np.array([1.0])
-        #     task = from_numpy(task).float().to(device)
-
-        # if i == 500:
-        #     task = np.array([-1.0])
-        #     task = from_numpy(task).float().to(device)
-        # if terminal:
-        #     break
-
-        # kwargs = {}
-        # if w is not None: kwargs['width'] = w
-        # if h is not None: kwargs['height'] = h
         image = env.render()
         frames.append(image)
 
@@ -171,29 +131,15 @@ def create_video():
         obs = next_obs
 
 
-        
-        # if environment_steps % env_reset_interval == 0 or terminal:
-        #     env.sample_task()
-        #     obs, _ = env.reset()
-
-
     # Initialize VideoWriter (only once)
     size = frames[0].shape
 
     # Save to corresponding repo
     save_as = config['experiments_repo']+config['experiment_name'] + f'/epoch_{config["epoch"]}.mp4'
-    # video = cv2.VideoWriter(save_as, cv2.VideoWriter_fourcc(*'mp4v'), fps, (size[1], size[0]), True)
-    # Write frames to video
-    # _frames_to_video(video, frames)
-    # video.release()
     _frames_to_gif(frames, save_as)
 
     # Save to place for easier scp
     save_as = config['experiments_repo'] + 'video.mp4'
-    # video = cv2.VideoWriter(save_as, cv2.VideoWriter_fourcc(*'mp4v'), fps, (size[1], size[0]), True)
-    # Write frames to video
-    # _frames_to_video(video, frames)
-    # video.release()
     _frames_to_gif(frames, save_as)
     print("DONE")
 

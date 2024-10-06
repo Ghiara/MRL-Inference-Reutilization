@@ -400,25 +400,12 @@ def model_evaluation(
 
 def load_model(encoder, config):
 
-    # env = HalfCheetahEnvExternalTask(1,1, terminal_threshold=0.05)
-    # transfer_function = TransferFunction(obs_dim=config['obs_dim_complex'], 
-    #                                 act_simple_dim=config['act_simple_dim'], 
-    #                                 hidden_sizes=config['hidden_sizes_transfer'], 
-    #                                 act_complex_dim=config['act_complex_dim'],
-    #                                 pretrained=config['pretrained_transfer_function']
-    #                                 )
-
-    # from experiments_configs.half_cheetah_multi_env import config as env_config
-    # complex_agent_config = dict(
-    #     environment = HalfCheetahMixtureEnv(env_config),
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'half_cheetah_definitive_training',
-    #     epoch = 1000,
-    # )
+    '''
+    Define the low-level policy and agent to test
+    '''
     complex_agent_config = dict(
         experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
         experiment_name = 'walker_pos_24_06',
-        # epoch = 1870,
         epoch = 700,
     )
     with open(os.path.join(complex_agent_config['experiments_repo'],complex_agent_config['experiment_name'], 'config.json'), "r") as file:
@@ -435,7 +422,9 @@ if __name__ == "__main__":
     import matplotlib
     matplotlib.use('Agg')
     
-    # Load models
+    '''
+    Deinfe the inference module
+    '''
     paths = [
         # "data/experiments/toy2d_on-off-policy/toy2d_rand_off-policy_log-random-inference_2023-02-26_19-58-01",
         # "data/experiments/toy2d_on-off-policy/toy2d_rand_off-policy_memory-random-inference_2023-02-26_19-57-52",

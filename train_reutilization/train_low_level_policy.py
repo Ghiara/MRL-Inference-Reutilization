@@ -32,7 +32,6 @@ import pytz
 from mrl_analysis.utility.data_smoothing import smooth_plot, smooth_fill_between
 from vis_utils.logging import log_all, _frames_to_gif
 
-# TRAIN = False
 saved_dict = False
 record_video_every = 50
 
@@ -42,7 +41,6 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
     # For logging
     value_loss_history, q_loss_history, policy_loss_history, rew_history = [], [], [], []
     max_traj_len_start = config['max_traj_len']
-    # random_restart_after = config['random_restart_after']
     
     path=f'{path}/{experiment_name}'
     change_task = False
@@ -52,25 +50,35 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
     file_path = path + '/config.json'
     with open(file_path, "w") as json_file:
         json.dump(config, json_file)
-        
+    
+    '''
+    Used for curriculum learning
+    '''
     restart_random = False
     # change_after = config['change_tasks_after']
     plot_every = config['plot_every']
     change_task = 0
     max_vel = False
     random_init = False
+
+
     for episode in range(1, epochs + 1):
         print("\033[1m" + f"Episode: {episode}" + "\033[0m")
 
-        # max_traj_len = max_traj_len_start + episode//3
+        '''
+        Initialize list for logging
+        '''
         max_traj_len = max_traj_len_start
-
         rew = []
         value_loss, q_loss, policy_loss = [], [], []
         number_of_changes = 0
         env.reached_goal = 0
         batch_reward = []
         task_changes = 0
+
+        '''
+        Parameters used for curriculum learning
+        '''
         if 'curriculum' in config:
             for i, change_epoch in enumerate(config['curriculum']['change_tasks_after']):
 
@@ -89,18 +97,31 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
 
         for batch in tqdm(range(batch_size)):
 
+            plot = False
+            record_video = False
+            if episode % record_video_every == 0 and batch==batch_size-1:
+                frames = []
+                image_info = dict(reward = [],
+                obs = [],
+                base_task = [],
+                task = [],
+                action = [])
+                plot = True
+                record_video = True
+
             # if episode > random_restart_after: 
             #     restart_random = True
             # if restart_random:
             #     state = env.random_reset()[0]
             # else:
+            '''
+            Used to randomly initialize the agent's position
+            '''
             if random_init:
                 state = env.random_reset(x_pos_range=[-50,50])[0]
             else:
                 state = env.reset()[0]
-
             done = 0
-
             task = env.sample_task()
 
             '''
@@ -114,28 +135,23 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
             episode_reward = 0
             j = 0
 
-            plot = False
-            record_video = False
-            if episode % record_video_every == 0 and batch==batch_size-1:
-                frames = []
-                image_info = dict(reward = [],
-                obs = [],
-                base_task = [],
-                task = [],
-                action = [])
-                plot = True
-                record_video = True
+            '''
+            Run trajectory of len max_traj_len
+            '''
             while not done and j<max_traj_len:
                 if batch == 0:
                     save = True
                 else: save = False
 
+                '''
+                choose action and perform it
+                '''
                 action = agent.choose_action(state, task)
                 next_state, reward, done, _, info = env.step(action)
                 # reward = reward.clip(-5, 2)
 
                 '''
-                Train
+                Train after every step with random sample from buffer
                 '''
                 agent.store(state, reward, done, action, next_state, task)
                 losses = agent.train(episode, save)
@@ -143,6 +159,9 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
                 policy_loss.append(losses[2])
                 q_loss.append(losses[1])
                 
+                '''
+                Save the position for plotting trajectories
+                '''
                 if env.base_task == env.config.get('tasks',{}).get('goal_front'):
                     curr_state = env.sim.data.qpos[0]
                 elif env.base_task == env.config.get('tasks',{}).get('goal_back'):
@@ -158,6 +177,9 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
                 elif env.base_task == env.config.get('tasks',{}).get('jump'):
                     curr_state = env.sim.data.qvel[1]
 
+                '''
+                If the agent has reached the goal change task with prob 0.2. Part of Curriculum Learning
+                '''
                 if np.abs(curr_state - env.task[env.base_task])<0.1 and np.random.random()>0.8:
                     change_task = True
                     number_of_changes+=1
@@ -170,8 +192,7 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
                     # if j%(max_traj_len//change_task) == 0 and j!=0:
                     task = env.sample_task()
                     change_task = False
-
-
+                
                 episode_reward += reward
                 state = next_state
                 rew.append(reward)
@@ -191,17 +212,6 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
             if record_video:
                 save_video_path = f'{path}/videos/{episode}_{batch}.mp4'
                 _frames_to_gif(frames, image_info, save_video_path)
-
-
-        # if episode%500 == 0 and change_after>50:
-        #     change_after-=50
-        # for _ in tqdm(range(policy_update_steps)):
-        #     losses = agent.train(episode, save)
-        #     value_loss.append(losses[0])
-        #     policy_loss.append(losses[2])
-        #     q_loss.append(losses[1])
-
-        
 
         traj_len.append(j)
         rew_history.append(np.mean(batch_reward))
@@ -233,6 +243,9 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
 
 if __name__ == "__main__":
 
+    '''
+    Load environment with agent to be trained
+    '''
     if config['env'] == 'half_cheetah_multi':
         env = HalfCheetahMixtureEnv(config)
     elif config['env'] == 'hopper_multi':

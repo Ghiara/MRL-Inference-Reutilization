@@ -35,6 +35,7 @@ from agent import SAC
 from model import ValueNetwork, QvalueNetwork, PolicyNetwork
 
 from mrl_analysis.plots.plot_settings import *
+from vis_utils.logging import log_all, _frames_to_gif
 
 # DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 DEVICE = 'cuda'
@@ -46,11 +47,8 @@ sim_time_steps = 10
 max_path_len = 100
 num_trajectories = 50
 plot_every = 5
-
 loss_criterion = nn.CrossEntropyLoss()
 
-
-# TODO: self.task_dim, task_logits_dim, batch_size are set manually
 class Memory():
 
     def __init__(self, memory_size):
@@ -86,68 +84,6 @@ class Memory():
 
         return tasks, simple_obs, simple_action, mu
 
-
-def log_all(agent, path, q1_loss, policy_loss, rew, episode):
-    '''
-    # Save under structure:
-    # - /home/ubuntu/juan/Meta-RL/experiments_transfer_function/<name_of_experiment>
-    #     - plots
-    #         - mean_reward_history
-    #         - qf_loss
-    #         - policy_loss
-    #     - models
-    #         - transfer_function / policy_net
-    #         - qf1
-    #         - value
-    '''
-
-    # TODO: save both vf losses (maybe with arg)
-    def save_plot(loss_history, name:str, path='/home/ubuntu/juan/Meta-RL/evaluation/transfer_function/one-sided/'):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-
-        plt.figure()
-        # Plotting the loss
-        plt.plot(loss_history)
-        plt.title('Loss over Time')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.savefig(path+name+'.png')
-        plt.savefig(path+name+'.pdf')
-
-        plt.close()
-        
-    # Save networks
-    curr_path = path + '/models/policy_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'epoch_{episode}.pth'
-    if episode % 500 == 0:
-        torch.save(agent.policy_network.cpu(), save_path)
-    curr_path = path + '/models/vf1_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'epoch_{episode}.pth'
-    if episode % 500 == 0:
-        torch.save(agent.q_value_network1.cpu(), save_path)
-    curr_path = path + '/models/vf2_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'epoch_{episode}.pth'
-    if episode % 500 == 0:
-        torch.save(agent.q_value_network2.cpu(), save_path)
-    curr_path = path + '/models/value_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'epoch_{episode}.pth'
-    if episode % 500 == 0:
-        torch.save(agent.value_network.cpu(), save_path)
-    agent.q_value_network1.to(DEVICE) 
-    agent.q_value_network2.to(DEVICE)
-    agent.value_network.to(DEVICE)
-    agent.policy_network.to(DEVICE) 
-
-    # Save plots
-    path_plots = path + '/plots/'
-    save_plot(q1_loss, name='vf_loss', path=path_plots)
-    save_plot(rew, name='reward_history', path=path_plots)
-    save_plot(policy_loss, name='policy_loss', path=path_plots)
-
 def get_encoder(path, shared_dim, encoder_input_dim):
     path = os.path.join(path, 'weights')
     for filename in os.listdir(path):
@@ -181,18 +117,6 @@ def get_encoder(path, shared_dim, encoder_input_dim):
     encoder.to(DEVICE)
     return encoder
 
-def sample_task():
-    goal_vel = np.random.choice([0,1,2,3])
-    if goal_vel == 0:
-        task = np.array([np.random.random()*15 + 1.0,0,0,0,0])
-    elif goal_vel == 1:
-        task = np.array([np.random.random()*15 - 16,0,0,0,0])
-    elif goal_vel == 2:
-        task = np.array([0,0,0,np.random.random()*2 + 1, 0])
-    else:
-        task = np.array([0,0,0,np.random.random()*2 - 3, 0])
-    return task
-
 def get_simple_agent(path, obs_dim, policy_latent_dim, action_dim, m):
     path = os.path.join(path, 'weights')
     for filename in os.listdir(path):
@@ -208,8 +132,6 @@ def get_simple_agent(path, obs_dim, policy_latent_dim, action_dim, m):
     policy.load_state_dict(torch.load(name, map_location='cpu'))
     policy.to(DEVICE)
     return policy
-
-
 
 def get_complex_agent(env, complex_agent_config):
     pretrained = complex_agent_config['experiments_repo']+complex_agent_config['experiment_name']+f"/models/policy_model/epoch_{complex_agent_config['epoch']}.pth"
@@ -258,35 +180,6 @@ def general_obs_map(env):
     simple_observations[...,0] = env.sim.data.qpos[0]    
     simple_observations[...,1] = env.sim.data.qvel[0]    
     return simple_observations
-
-def scale_simple_action(simple_action, obs, pos_x=[0.5,25], velocity_x=[0.5, 3.0], pos_y=[np.pi / 5., np.pi / 2.], velocity_y=[2. * np.pi, 4. * np.pi], velocity_z=[1.5, 3.], step='set_position'):
-    simple_env_dt = 0.05
-    scaled_action = torch.zeros(2)
-    scaled_action[0] = obs[0] + simple_action[0]*velocity_x[1]*simple_env_dt
-    scaled_action[1] = simple_action[0]*velocity_x[1]
-
-    return scaled_action
-
-
-def _frames_to_gif(video: cv2.VideoWriter, frames: List[np.ndarray], info, gif_path, transform: Callable = None):
-    """ Write collected frames to video file """
-    os.makedirs(os.path.dirname(gif_path), exist_ok=True)
-    with imageio.get_writer(gif_path, mode='I', fps=10) as writer:
-        for i, frame in enumerate(frames):
-            frame = frame.astype(np.uint8)  # Ensure the frame is of type uint8
-            frame = np.ascontiguousarray(frame)
-            cv2.putText(frame, 'reward: ' + str(info['reward'][i]), (0, 35), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            cv2.putText(frame, 'obs: ' + str(info['obs'][i]), (0, 55), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            cv2.putText(frame, 'simple_action: ' + str(info['simple_action'][i]), (0, 15), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            cv2.putText(frame, 'task: ' + str(info['base_task'][i]), (0, 75), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            # Apply transformation if any
-            if transform is not None:
-                frame = transform(frame)
-            else:
-                # Convert color space if no transformation provided
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            writer.append_data(frame)
 
 def get_decoder(path, action_dim, obs_dim, reward_dim, latent_dim, output_action_dim, net_complex_enc_dec, variant):
     path = os.path.join(path, 'weights')
@@ -350,33 +243,6 @@ def save_plot(loss_history, name:str, path='/home/ubuntu/juan/melts/plots'):
 
         plt.close()
 
-def step_cheetah(task, obs):
-
-    for i in range(sim_time_steps):
-            
-            complex_action = transfer_function.get_action(ptu.from_numpy(obs), task, return_dist=False)
-            next_obs, r, internal_done, truncated, env_info = env.step(complex_action.detach().cpu().numpy())
-
-            # image = env.render()
-            # frames.append(image)
-            # image_info['reward'].append(r)
-            # image_info['obs'].append(task)
-            # image_info['base_task'].append(env.task)
-            # if internal_done:
-            #     break
-
-            obs = next_obs
-        
-    return r, next_obs
-
-def normalize_data(stats_dict, o, a, r, next_o):
-        o = torch.Tensor((o - stats_dict['observations']['mean']) / (stats_dict['observations']['std'] + 1e-9))
-        a = torch.Tensor((a - stats_dict['actions']['mean']) / (stats_dict['actions']['std'] + 1e-9))
-        r = torch.Tensor((r - stats_dict['rewards']['mean']) / (stats_dict['rewards']['std'] + 1e-9))
-        next_o = torch.Tensor((next_o - stats_dict['next_observations']['mean']) / (stats_dict['next_observations']['std'] + 1e-9))
-
-        return o, a, r, next_o
-
 
 def rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor, transfer_function, memory, 
             variant, obs_dim, actions_dim, max_path_len, 
@@ -393,13 +259,9 @@ def rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor, tran
     value_loss_history, q_loss_history, policy_loss_history, rew_history = [], [], [], []
     path = save_video_path
     
-    # with open(f'{save_video_path}/weights/stats_dict.json', 'r') as file:
-    #     stats_dict = json.load(file)
  
     loss_history = []
 
-    # Collect rewards for plotting
-    # Removed tasks_pos, tasks_vel, x_pos_plot, x_vel_plot as they are not needed for box plots
     pos_reward, vel_reward = 0, 0
     tasks_pos, tasks_vel = [], []
     x_pos_plot, x_vel_plot = [],[]
@@ -453,14 +315,6 @@ def rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor, tran
                 count+=1
                 if count>150:
                     return 'Failed to sample task. Attempted 150 times.'
-        # env.update_task(task)
-        # if env.base_task in [env.config.get('tasks',{}).get('forward_vel'), 
-        #                                 env.config.get('tasks',{}).get('backward_vel')]:
-        #     max_path_len = 300//sim_time_steps
-        # else:
-        #     max_path_len = 2000//sim_time_steps
-
-        # metadata_file.write(f"{env.base_task} [{env.task[env.base_task]}] -> {random.randint(0, 4)}\n")
 
         _loss  = []
 
@@ -472,12 +326,9 @@ def rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor, tran
             simple_env.sim.data.set_joint_qvel('boxslideX', env.sim.data.qvel[0])
             encoder_input = contexts.detach().clone()
             encoder_input = encoder_input.view(encoder_input.shape[0], -1).to(DEVICE)
-            mu, log_var = encoder(encoder_input)     # Is this correct??
-            # if path_length == 50:
-            #     tensor_file.write(f"{mu.detach().cpu().numpy()[0][0]}\t{mu.detach().cpu().numpy()[0][1]}\t{mu.detach().cpu().numpy()[0][2]}\t{mu.detach().cpu().numpy()[0][3]}\n")
+            mu, log_var = encoder(encoder_input)
 
             obs_before_sim = env._get_obs()
-            # simple_obs_before = cheetah_to_simple_env_obs(obs_before_sim)
             simple_obs_before = general_obs_map(env)
 
             # Save latent vars
@@ -501,44 +352,13 @@ def rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor, tran
                     simple_obs[env.config.get('tasks',{}).get('forward_vel')] = np.clip(_simple_obs[1].item(), -3,3)
                 else:
                     simple_obs[env.config.get('tasks',{}).get('backward_vel')] = np.clip(_simple_obs[1].item(), -3,3)
-            # steps = 1 if task_prediction in [env.config.get('tasks',{}).get('forward_vel'), env.config.get('tasks',{}).get('backward_vel')] else 20
-            # task_prediction = env.config.get('tasks',{}).get('goal_front')
 
 
             base_task_pred = torch.argmax(torch.abs(simple_obs))
-                # action_prev[[1,2,4]] = 0 * action_prev[[1,2,4]]
-                # action = action_prev
-            #TODO: redo this with new trainings
             action = torch.zeros_like(simple_obs).to(DEVICE)
             action[base_task_pred] = simple_obs[base_task_pred]
             desired_state = action
             action_normalize = simple_obs_before[0].item() - simple_obs[0].item()
-            # desired_state = torch.zeros_like(action).to(DEVICE)
-            # if base_task_pred == env.config.get('tasks',{}).get('goal_front'):
-            #     action_normalize = action[base_task_pred].item()
-            #     action[base_task_pred] = action[base_task_pred] + env.sim.data.qpos[0]
-            #     #TODO: change to desired_state[base_task_pred] = action[base_task_pred], do a function that maps the base task to desired state
-            #     desired_state[base_task_pred] = action[base_task_pred]
-            # elif base_task_pred == env.config.get('tasks',{}).get('goal_back'):
-            #     action_normalize = action[base_task_pred].item()
-            #     action[base_task_pred] = - action[base_task_pred] + env.sim.data.qpos[0]
-            #     #TODO: change to desired_state[base_task_pred] = action[base_task_pred], do a function that maps the base task to desired state
-            #     desired_state[base_task_pred] = action[base_task_pred]
-            # elif base_task_pred == env.config.get('tasks',{}).get('forward_vel'):
-            #     action[base_task_pred] = action[base_task_pred] * range_dict['velocity_x'][1]
-            #     desired_state[base_task_pred] = action[base_task_pred]
-            # elif base_task_pred == env.config.get('tasks',{}).get('backward_vel'):
-            #     action[base_task_pred] = - action[base_task_pred] * range_dict['velocity_x'][1]
-            #     desired_state[base_task_pred] = action[base_task_pred]
-            # elif base_task_pred == env.config.get('tasks',{}).get('jump'):
-            #     action[base_task_pred] = action[base_task_pred] * range_dict['velocity_z'][1]
-            #     desired_state[base_task_pred] = action[base_task_pred]
-            # elif base_task_pred == env.config.get('tasks',{}).get('stand_front'):
-            #     action[base_task_pred] = action[base_task_pred] * range_dict['pos_y'][1]
-            #     desired_state[base_task_pred] = action[base_task_pred]
-            # elif base_task_pred == env.config.get('tasks',{}).get('stand_back'):
-            #     action[base_task_pred] = - action[base_task_pred] * range_dict['pos_y'][1]
-            #     desired_state[base_task_pred] = action[base_task_pred]
             max_steps = 20
             sim_time_steps = int(torch.clamp(step_predictor.choose_action(obs, desired_state.detach().cpu().numpy(), torch=True).squeeze()*max_steps,1,max_steps))
             for i in range(sim_time_steps):
@@ -713,7 +533,9 @@ def rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor, tran
 if __name__ == "__main__":
     # from experiments_configs.half_cheetah_multi_env import config as env_config
 
-    # List of inference paths to test
+    '''
+    List of inference paths to test. The inference paths contain the inference models trained on the toy with different randomization values
+    '''
     inference_paths = [
         # {'name': 'var_0.1keep', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_16_15_34_37_default_true_gmm'},
         # {'name': 'var_0.1keepno', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_16_12_22_59_default_true_gmm'},
@@ -730,7 +552,9 @@ if __name__ == "__main__":
         # {'name': 'inference_path_3', 'path': '/path/to/inference_path_3'},
     ]
 
-    # You may need to adjust these paths and configurations as per your setup
+    '''
+    Define the low-level policy and agent to test
+    '''
     complex_agent_config = dict(
         environment = HalfCheetahMixtureEnv,
         experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
@@ -764,8 +588,6 @@ if __name__ == "__main__":
         inference_path = inference['path']
         rewards_data[current_inference_path_name] = {'velocity': [], 'position': []}
 
-        
-
         with open(complex_agent_config['experiments_repo'] + complex_agent_config['experiment_name'] + '/config.json', 'r') as file:
             env_config = json.load(file)
 
@@ -785,8 +607,6 @@ if __name__ == "__main__":
 
         with open(f'{inference_path}/variant.json', 'r') as file:
             variant = json.load(file)
-
-        # ptu.set_gpu_mode(variant['util_params']['use_gpu'], variant['util_params']['gpu_id'])
 
         m = variant['algo_params']['sac_layer_size']
         simple_env = ENVS[variant['env_name']](**variant['env_params'])         # Just used for initilization purposes
@@ -848,6 +668,10 @@ if __name__ == "__main__":
                                         transfer_function, memory, variant, obs_dim, action_dim, 
                                         max_path_len, n_tasks=1, inner_loop_steps=10, save_video_path=inference_path, experiment_name=complex_agent_config['experiment_name'],
                                         current_inference_path_name=current_inference_path_name)
+       
+        '''
+        After the striding predictor is trained, plot the results with symmetric goals
+        '''
         tasks = [
             {'base_task':'goal_back', 'specification':0.9},
             {'base_task':'goal_back', 'specification':0.5},
@@ -869,6 +693,10 @@ if __name__ == "__main__":
                                         max_path_len, n_tasks=1, inner_loop_steps=10, save_video_path=inference_path, experiment_name=complex_agent_config['experiment_name'],
                                         current_inference_path_name=current_inference_path_name, tasks=tasks)
 
+
+    '''
+    Create the box plot
+    '''
     import matplotlib.pyplot as plt
 
     # Assuming inference_paths and rewards_data are already defined
@@ -937,8 +765,8 @@ if __name__ == "__main__":
     plt.tight_layout()
 
     # Save the plot
-    plt.savefig('/home/ubuntu/juan/melts/rewards_boxplot.png', dpi=300)
-    plt.savefig('/home/ubuntu/juan/melts/rewards_boxplot.pdf', dpi=300)
+    plt.savefig(f'{os.getcwd()}/rewards_boxplot.png', dpi=300)
+    plt.savefig(f'{os.getcwd()}/rewards_boxplot.pdf', dpi=300)
 
     # Show the plot
     plt.show()

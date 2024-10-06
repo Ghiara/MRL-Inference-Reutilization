@@ -19,7 +19,7 @@ import imageio
 import rlkit.torch.pytorch_util as ptu
 from tigr.task_inference.prediction_networks import DecoderMDP, ExtendedDecoderMDP
 import matplotlib.pyplot as plt
-from replay_memory import Memory
+from various_experiments.replay_memory import Memory
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
@@ -28,6 +28,7 @@ from typing import Tuple
 from agent import SAC
 from model import ValueNetwork, QvalueNetwork, PolicyNetwork
 from mrl_analysis.utility.data_smoothing import smooth_plot, smooth_fill_between
+from vis_utils.logging import log_all, _frames_to_gif
 
 from mrl_analysis.plots.plot_settings import *
 
@@ -45,96 +46,12 @@ plot_every = 5
 batch_size = 10
 policy_update_steps = 1024
 
-def log_all(agent, path, q1_loss, policy_loss, rew, episode, save_network='high_level', additional_plot=False):
-    '''
-    # Save under structure:
-    # - /home/ubuntu/juan/Meta-RL/experiments_transfer_function/<name_of_experiment>
-    #     - plots
-    #         - mean_reward_history
-    #         - qf_loss
-    #         - policy_loss
-    #     - models
-    #         - transfer_function / policy_net
-    #         - qf1
-    #         - value
-    '''
-
-    # TODO: save both vf losses (maybe with arg)
-    def save_plot(loss_history, name:str, path='/home/ubuntu/juan/Meta-RL/evaluation/transfer_function/one-sided/', figure_size: Tuple[int,int] = (20, 10)):
-        def remove_outliers_iqr(data):
-            Q1 = np.percentile(data, 25)
-            Q3 = np.percentile(data, 75)
-            IQR = Q3 - Q1
-            lower_bound = Q1 - 1.5 * IQR
-            upper_bound = Q3 + 1.5 * IQR
-            data = np.array(data)
-            return data[(data >= lower_bound) & (data <= upper_bound)]
-        
-        def moving_average(data, window_size=10):
-            # window = np.ones(int(window_size))/float(window_size)
-            # return np.convolve(data, window, 'same')
-            index_array = np.arange(1, len(data) + 1)
-            data = pd.Series(data, index = index_array)
-            return data.rolling(window=window_size).mean()
-        def format_label(label):
-            words = label.split('_')
-            return ' '.join(word.capitalize() for word in words)
-        
-        # TODO: save both vf losses (maybe with arg)
-        os.makedirs(path, exist_ok=True)
-        fig, axs = plt.subplots(1, figsize=figure_size)
-        smooth_plot(axs, np.arange(len(loss_history)), loss_history, label=format_label(name))
-        axs.legend()
-        axs.set_xlabel('Train epochs')
-
-        # plt.figure()
-        # # Plotting the loss
-        # # plt.plot(smoothed_loss, color='blue')
-        # # plt.plot(loss_history, color='blue', alpha=0.3)
-        # plt.title('Loss over Time')
-        # plt.xlabel('Epoch')
-        # plt.ylabel('Loss')
-        fig.savefig(os.path.join(path,name+'.png'))
-        fig.savefig(os.path.join(path,name+'.pdf'))
-
-        plt.close()
-    
-    path = os.path.join(path, experiment_name)
-    # Save networks
-    curr_path = path + '/models/policy_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'{save_network}.pth'
-    if episode % 500 == 0:
-        torch.save(agent.policy_network.cpu(), save_path)
-    curr_path = path + '/models/vf1_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'{save_network}.pth'
-    if episode % 500 == 0:
-        torch.save(agent.q_value_network1.cpu(), save_path)
-    curr_path = path + '/models/vf2_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'{save_network}.pth'
-    if episode % 500 == 0:
-        torch.save(agent.q_value_network2.cpu(), save_path)
-    curr_path = path + '/models/value_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'{save_network}.pth'
-    if episode % 500 == 0:
-        torch.save(agent.value_network.cpu(), save_path)
-    agent.q_value_network1.cuda() 
-    agent.q_value_network2.cuda()
-    agent.value_network.cuda()
-    agent.policy_network.cuda() 
-
-    # Save plots
-    path_plots = os.path.join(path, 'plots', save_network)
-    save_plot(q1_loss, name='vf_loss', path=path_plots)
-    save_plot(rew, name='reward_history', path=path_plots)
-    save_plot(policy_loss, name='policy_loss', path=path_plots)
-    if additional_plot:
-        save_plot(additional_plot['data'], name=additional_plot['name'], path=path_plots)
-
 def get_encoder(path, shared_dim, encoder_input_dim):
+
+    '''
+    This function is used to load the encoder trained on the toy agent given by path
+    '''
+
     path = os.path.join(path, 'weights')
     for filename in os.listdir(path):
         if filename.startswith('encoder'):
@@ -171,6 +88,11 @@ def get_encoder(path, shared_dim, encoder_input_dim):
 
 
 def get_complex_agent(env, complex_agent_config, train=False):
+
+    '''
+    This function is used to load the low-level controller specifide by comlpex_agent_config
+    '''
+
     n_states = env.observation_space.shape[0]
     n_actions = env.action_space.shape[0]
     action_bounds = [env.action_space.low[0], env.action_space.high[0]]
@@ -204,7 +126,6 @@ def get_complex_agent(env, complex_agent_config, train=False):
     return transfer_function
 
 def cheetah_to_simple_env_map(
-    # observations: torch.Tensor, 
     observations,
     next_observations: torch.Tensor):
     """
@@ -222,47 +143,6 @@ def cheetah_to_simple_env_map(
     next_simple_observations[...,1] = next_observations[...,8]
 
     return simple_observations, next_simple_observations
-
-
-def _frames_to_gif(frames: List[np.ndarray], info, gif_path, transform: Callable = None):
-    """ Write collected frames to video file """
-    os.makedirs(os.path.dirname(gif_path), exist_ok=True)
-    with imageio.get_writer(gif_path, mode='I', fps=10) as writer:
-        for i, frame in enumerate(frames):
-            frame = frame.astype(np.uint8)  # Ensure the frame is of type uint8
-            frame = np.ascontiguousarray(frame)
-            cv2.putText(frame, 'reward: ' + str(info['reward'][i]), (0, 35), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            cv2.putText(frame, 'obs: ' + str(info['obs'][i]), (0, 55), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            cv2.putText(frame, 'action: ' + str(info['action'][i]), (0, 15), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            cv2.putText(frame, 'task: ' + str(info['base_task'][i]), (0, 75), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            # Apply transformation if any
-            if transform is not None:
-                frame = transform(frame)
-            else:
-                # Convert color space if no transformation provided
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            writer.append_data(frame)
-
-def get_decoder(path, action_dim, obs_dim, reward_dim, latent_dim, output_action_dim, net_complex_enc_dec, variant):
-    path = os.path.join(path, 'weights')
-    for filename in os.listdir(path):
-        if filename.startswith('decoder'):
-            name = os.path.join(path, filename)
-    output_action_dim = 8
-    decoder = ExtendedDecoderMDP(
-        action_dim,
-        obs_dim,
-        reward_dim,
-        latent_dim,
-        output_action_dim,
-        net_complex_enc_dec,
-        variant['env_params']['state_reconstruction_clip'],
-    ) 
-
-    decoder.load_state_dict(torch.load(name, map_location='cpu'))
-    decoder.to(DEVICE)
-    return decoder
 
 def rollout(env, encoder, decoder, high_level_controller, step_predictor, transfer_function, 
             variant, obs_dim, actions_dim, max_path_len, 
@@ -342,32 +222,12 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                 # get encodings
                 encoder_input = contexts.detach().clone()
                 encoder_input = encoder_input.view(encoder_input.shape[0], -1).to(DEVICE)
-                mu, log_var = encoder(encoder_input)     # Is this correct??
-
-                # Save values for plotting
-                # if env.task[0]<0:
-                #     label = -1
-                # elif env.task[0]>0:
-                #     label = 1
-                # elif env.task[3]<0:
-                #     label = -2
-                # elif env.task[3]>0:
-                #     label = 2
-                # if path_length == 0:
-                #     l_vars = mu.detach().cpu().numpy()
-                #     labels = np.array([label])
-                # else:
-                #     l_vars = np.concatenate((l_vars, mu.detach().cpu().numpy()), axis = 0)
-                #     labels = np.concatenate((labels, np.array([label])), axis = 0)
+                mu, log_var = encoder(encoder_input)
 
                 obs_before_sim = env._get_obs()
 
-                # Save latent vars
-                # policy_input = torch.cat([ptu.from_numpy(obs), mu.squeeze()], dim=-1)
                 action_prev = high_level_controller.choose_action(obs.squeeze(), mu.cpu().detach().numpy().squeeze(), torch=True, max_action=False, sigmoid=True).squeeze()
-                action_prev[2:] = 0 * action_prev[2:]
-                # action = action_prev
-                #TODO: redo this with new trainings
+
                 action = torch.zeros_like(action_prev).to(DEVICE)
                 action[torch.argmax(torch.abs(action_prev))] = action_prev[torch.argmax(torch.abs(action_prev))]
                 if action[env.config.get('tasks',{}).get('goal_front')] != 0:
@@ -391,9 +251,7 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                 i = 0
                 while (i < sim_time_steps) and (not done):
                     i+=1
-                    # complex_action = transfer_function.get_action(ptu.from_numpy(obs), action, return_dist=False)
                     complex_action = transfer_function.choose_action(obs, action.detach().cpu().numpy(), torch=True).squeeze()
-                    # complex_action = transfer_function.get_action(ptu.from_numpy(obs), action, return_dist=False)
                     next_obs, step_r, done, truncated, env_info = env.step(complex_action.detach().cpu().numpy(), healthy_scale=0)
 
                     simple_obs = [env.sim.data.qpos[0], env.sim.data.qvel[0]]
@@ -421,9 +279,6 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                     transfer_function_value_loss.append(transfer_function_losses[0])
                     transfer_function_policy_loss.append(transfer_function_losses[2])
                     transfer_function_q_loss.append(transfer_function_losses[1])
-                    # goal_obs = action[[0,3]]
-                    # non_zero_mask = (simple_obs != 0) & (goal_obs != 0)
-                    # Compute the difference where neither element is ze`ro
                     
                     step_r -= 0.05 * torch.sum(torch.square(action_prev)).detach().cpu().numpy()
                     step_r = step_r.clip(-2, 2)
@@ -438,7 +293,6 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                     r = step_r
                     low_episode_reward += low_level_r
 
-                # r = r/sim_time_steps
                 sim_time_steps_list.append(sim_time_steps)
 
                 sim_steps_r -= beta * sim_time_steps
@@ -521,13 +375,8 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                 plt.savefig(filename, dpi=300)  # Save the figure with 300 dpi resolution
                 plt.close()
 
-                # Save to corresponding repo
-                # fps=10
                 save_as = f'{save_video_path}/videos/{experiment_name}/transfer_{episode}.mp4'
-                # video = cv2.VideoWriter(save_as, cv2.VideoWriter_fourcc(*'mp4v'), fps, (size[1], size[0]), True)
-                # Write frames to video
                 _frames_to_gif(frames, image_info, save_as)
-                # video.release()
 
 
             low_rew.append(low_episode_reward)
@@ -595,24 +444,6 @@ if __name__ == "__main__":
 
     inference_path = '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm'
 
-    
-    # complex_agent_config = dict(
-    #     environment = HalfCheetahMixtureEnv(env_config),
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'half_cheetah_definitive_training',
-    #     epoch = 1000,
-    # )
-    # complex_agent_position = dict(
-    #     environment = HalfCheetahMixtureEnv(env_config),
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'half_cheetah_dt0.01_mall_vel3',
-    #     epoch = 6000,
-    # )
-    # complex_agent_vel = dict(
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'half_cheetah_dt0.01_only_vel',
-    #     epoch = 2000,
-    # )
     # complex_agent = dict(
     #     environment = WalkerMulti,
     #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
@@ -631,33 +462,16 @@ if __name__ == "__main__":
     #     experiment_name = 'new_cheetah_training/half_cheetah_initial_random',
     #     epoch = 700,
     # )
-    # complex_agent_vel = dict(
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'walker_curriculum',
-    #     epoch = 1500,
-    # )
     
 
     with open(complex_agent['experiments_repo'] + complex_agent['experiment_name'] + '/config.json', 'r') as file:
         env_config = json.load(file)
-
-    # complex_agent_config = dict(
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'hopper_change_task_dt_0.01(before0.004)',
-    #     epoch = 16000,
-    # )
-    # with open(complex_agent_config['experiments_repo'] + complex_agent_config['experiment_name'] + '/config.json', 'r') as file:
-    #     env_config = json.load(file)
-    # environment = HopperMulti(env_config)
-    # complex_agent_config['environment'] = environment
 
     env = complex_agent['environment'](env_config)
     env.render_mode = 'rgb_array'
 
     with open(f'{inference_path}/variant.json', 'r') as file:
         variant = json.load(file)
-
-    # ptu.set_gpu_mode(variant['util_params']['use_gpu'], variant['util_params']['gpu_id'])
 
     m = variant['algo_params']['sac_layer_size']
     simple_env = ENVS[variant['env_name']](**variant['env_params'])         # Just used for initilization purposes
@@ -669,7 +483,6 @@ if __name__ == "__main__":
     latent_dim = variant['algo_params']['latent_size']
     time_steps = variant['algo_params']['time_steps']
     num_classes = variant['reconstruction_params']['num_classes']
-    # max_path_len = variant['algo_params']['max_path_length']
     reward_dim = 1
     encoder_input_dim = time_steps * (obs_dim + reward_dim + obs_dim)
     shared_dim = int(encoder_input_dim / time_steps * net_complex_enc_dec)
@@ -693,9 +506,6 @@ if __name__ == "__main__":
     memory = Memory(1e+6)
     encoder = get_encoder(inference_path, shared_dim, encoder_input_dim)
     transfer_function = get_complex_agent(env, complex_agent, train=True)
-    # transfer_function_vel = get_complex_agent(env, complex_agent_vel)
-    # pretrained_transfer = dict(path=os.path.join(complex_agent_config['experiments_repo'], complex_agent_config['experiment_name']),
-    #                            epoch = complex_agent_config['epoch'])
 
     high_level_controller = SAC(n_states=env.observation_space.shape[0],
                 n_actions=env.action_space.shape[0],
@@ -711,7 +521,7 @@ if __name__ == "__main__":
                 action_bounds=[-50,50],
                 reward_scale=5)
     output_action_dim = 8
-    # decoder = get_decoder(inference_path, action_dim, obs_dim, reward_dim, latent_dim, output_action_dim, net_complex_enc_dec, variant)
+
     decoder = None
     step_predictor = SAC(n_states=env.observation_space.shape[0],
                 n_actions=1,

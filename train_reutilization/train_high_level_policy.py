@@ -31,6 +31,8 @@ from model import ValueNetwork, QvalueNetwork, PolicyNetwork
 from mrl_analysis.utility.data_smoothing import smooth_plot, smooth_fill_between
 from mrl_analysis.plots.plot_settings import *
 
+from vis_utils.logging import log_all, _frames_to_gif
+
 # DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 DEVICE = 'cuda'
 ptu.set_gpu_mode(True)
@@ -45,90 +47,10 @@ plot_every = 5
 batch_size = 20
 policy_update_steps = 512
 
-def log_all(agent, path, q1_loss, policy_loss, rew, episode, save_network='high_level', additional_plot=False):
-    '''
-    # This function is used to save loss/reward histories and weights under structure:
-    # - path
-    #     - plots
-    #         - mean_reward_history
-    #         - qf_loss
-    #         - policy_loss
-    #     - models
-    #         - transfer_function / policy_net
-    #         - qf1
-    #         - value
-    '''
-
-    # TODO: save both vf losses (maybe with arg)
-    def save_plot(loss_history, name:str, path='/home/ubuntu/juan/melts/experiment_plots', figure_size: Tuple[int,int] = (20, 10)):
-        def remove_outliers_iqr(data):
-            Q1 = np.percentile(data, 25)
-            Q3 = np.percentile(data, 75)
-            IQR = Q3 - 1.5 * IQR
-            lower_bound = Q1 - 1.5 * IQR
-            upper_bound = Q3 + 1.5 * IQR
-            data = np.array(data)
-            return data[(data >= lower_bound) & (data <= upper_bound)]
-
-        def moving_average(data, window_size=10):
-            index_array = np.arange(1, len(data) + 1)
-            data = pd.Series(data, index=index_array)
-            return data.rolling(window=window_size).mean()
-
-        def format_label(label):
-            words = label.split('_')
-            return ' '.join(word.capitalize() for word in words)
-
-        os.makedirs(path, exist_ok=True)
-        fig, axs = plt.subplots(1, figsize=figure_size)
-        smooth_plot(axs, np.arange(len(loss_history)), loss_history, label=format_label(name))
-        axs.legend(fontsize=24)
-        axs.set_xlabel('Train epochs', fontsize=20)
-        axs.tick_params(axis='both', which='major', labelsize=20)
-        axs.tick_params(axis='both', which='minor', labelsize=20)
-
-        fig.savefig(os.path.join(path, name + '.png'))
-        fig.savefig(os.path.join(path, name + '.pdf'))
-        plt.close()
-    
-    path = os.path.join(path, experiment_name)
-    # Save networks
-    curr_path = path + '/models/policy_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'{save_network}.pth'
-    if episode % 50 == 0:
-        torch.save(agent.policy_network.cpu(), save_path)
-    curr_path = path + '/models/vf1_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'{save_network}.pth'
-    if episode % 50 == 0:
-        torch.save(agent.q_value_network1.cpu(), save_path)
-    curr_path = path + '/models/vf2_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'{save_network}.pth'
-    if episode % 50 == 0:
-        torch.save(agent.q_value_network2.cpu(), save_path)
-    curr_path = path + '/models/value_model/'
-    os.makedirs(os.path.dirname(curr_path), exist_ok=True)
-    save_path = curr_path + f'{save_network}.pth'
-    if episode % 50 == 0:
-        torch.save(agent.value_network.cpu(), save_path)
-    agent.q_value_network1.cuda() 
-    agent.q_value_network2.cuda()
-    agent.value_network.cuda()
-    agent.policy_network.cuda() 
-
-    # Save plots
-    path_plots = os.path.join(path, 'plots', save_network)
-    save_plot(q1_loss, name='vf_loss', path=path_plots)
-    save_plot(rew, name='reward_history', path=path_plots)
-    save_plot(policy_loss, name='policy_loss', path=path_plots)
-    if additional_plot:
-        save_plot(additional_plot['data'], name=additional_plot['name'], path=path_plots)
 
 def get_encoder(path, shared_dim, encoder_input_dim):
     '''
-    # This function is used to load the encoder trained on the toy agent given by path
+    This function is used to load the encoder trained on the toy agent given by path
     '''
     path = os.path.join(path, 'weights')
     for filename in os.listdir(path):
@@ -227,52 +149,6 @@ def multiple_cheetah_to_simple_env_map(obs, next_obs, env):
     next_simple_observations[...,5] = env.sim.data.qvel[2]
 
     return simple_observations, next_simple_observations
-
-
-def _frames_to_gif(frames: List[np.ndarray], info, gif_path, transform: Callable = None):
-    """
-    Create a gif from frames
-    """
-    os.makedirs(os.path.dirname(gif_path), exist_ok=True)
-    with imageio.get_writer(gif_path, mode='I', fps=10) as writer:
-        for i, frame in enumerate(frames):
-            frame = frame.astype(np.uint8)  # Ensure the frame is of type uint8
-            frame = np.ascontiguousarray(frame)
-            cv2.putText(frame, 'reward: ' + str(info['reward'][i]), (0, 35), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            cv2.putText(frame, 'obs: ' + str(info['obs'][i]), (0, 55), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            cv2.putText(frame, 'action: ' + str(info['action'][i]), (0, 15), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            cv2.putText(frame, 'task: ' + str(info['base_task'][i]), (0, 75), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            # Apply transformation if any 
-            if transform is not None:
-                frame = transform(frame)
-            else:
-                # Convert color space if no transformation provided
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            writer.append_data(frame)
-
-def get_decoder(path, action_dim, obs_dim, reward_dim, latent_dim, output_action_dim, net_complex_enc_dec, variant):
-    path = os.path.join(path, 'weights')
-    """
-    Loads the decoder from the inference module
-    """
-    for filename in os.listdir(path):
-        if filename.startswith('decoder'):
-            name = os.path.join(path, filename)
-    output_action_dim = 8
-    decoder = ExtendedDecoderMDP(
-        action_dim,
-        obs_dim,
-        reward_dim,
-        latent_dim,
-        output_action_dim,
-        net_complex_enc_dec,
-        variant['env_params']['state_reconstruction_clip'],
-    ) 
-
-    decoder.load_state_dict(torch.load(name, map_location='cpu'))
-    decoder.to(DEVICE)
-    return decoder
 
 def rollout(env, encoder, decoder, high_level_controller, step_predictor, transfer_function, 
             variant, obs_dim, actions_dim, max_path_len, 
@@ -751,7 +627,7 @@ if __name__ == "__main__":
                 # pretrained=dict(path='/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm/retrain_walker', file_name='high_level')
                 )
     output_action_dim = 8
-    # decoder = get_decoder(inference_path, action_dim, obs_dim, reward_dim, latent_dim, output_action_dim, net_complex_enc_dec, variant)
+    
     decoder = None
     step_predictor = SAC(n_states=env.observation_space.shape[0],
                 n_actions=1,
