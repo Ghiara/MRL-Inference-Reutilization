@@ -9,7 +9,7 @@
 ### Files ###
 *playground*
 nohup.out
-
+requirements*.txt
 
 ### Directories ###
 failed_experiments/

@@ -35,7 +35,7 @@ from mrl_analysis.plots.plot_settings import *
 DEVICE = 'cuda'
 ptu.set_gpu_mode(True)
 
-experiment_name = 'cheetah_max_action_old_beta'
+experiment_name = 'cheetah_max_action'
 # TODO: einheitliches set to device
 simple_env_dt = 0.05
 sim_time_steps = 20
@@ -452,16 +452,16 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                 Calculate low-level reward. Penalize too many steps with beta
                 '''
                 if base_task_pred in [env.config.get('tasks',{}).get('goal_front')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['goal_front']].detach().cpu().numpy()-env.sim.data.qpos[0])/np.abs(action_normalize) - beta*sim_time_steps
+                    low_level_r = - np.abs(action[env.config['tasks']['goal_front']].detach().cpu().numpy()-env.sim.data.qpos[0]+beta*sim_time_steps)/np.abs(action_normalize)
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('goal_back')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['goal_back']].detach().cpu().numpy()-env.sim.data.qpos[0])/np.abs(action_normalize) - beta*sim_time_steps
+                    low_level_r = - np.abs(action[env.config['tasks']['goal_back']].detach().cpu().numpy()-env.sim.data.qpos[0]+beta*sim_time_steps)/np.abs(action_normalize)
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('forward_vel')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['forward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0])/np.abs(action[env.config['tasks']['forward_vel']].item()) - beta*sim_time_steps
+                    low_level_r = - np.abs(action[env.config['tasks']['forward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0]+beta*sim_time_steps)/np.abs(action[env.config['tasks']['forward_vel']].item())
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('backward_vel')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['backward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0])/np.abs(action[env.config['tasks']['backward_vel']].item()) - beta*sim_time_steps
+                    low_level_r = - np.abs(action[env.config['tasks']['backward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0]+beta*sim_time_steps)/np.abs(action[env.config['tasks']['backward_vel']].item())
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('stand_front')]:
                     low_level_r = - np.abs(action[env.config['tasks']['stand_front']].detach().cpu().numpy()-env.sim.data.qpos[2])/np.abs(action[env.config['tasks']['stand_front']].item()) - beta * sim_time_steps
@@ -747,7 +747,7 @@ if __name__ == "__main__":
                 alpha=0.2,
                 lr=3e-4,
                 action_bounds=[-50,50],
-                reward_scale=1, 
+                reward_scale=5, 
                 # pretrained=dict(path='/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm/retrain_walker', file_name='high_level')
                 )
     output_action_dim = 8
