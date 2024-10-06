@@ -30,6 +30,10 @@ to *requirements.txt* in this case. In the following, we will proceed with conda
 
 Install the environment using the ``conda`` command:
 ```bash
+conda env create --file updated_environment.yml
+```
+If that doesn't do the job, try:
+```bash
 conda env create --file environment.yml
 ```
 This might take some time because it needs to download and install all required packages.
@@ -50,10 +54,6 @@ conda activate inference-reutilization
 In case you need to update an existing environment, you can run
 ```bash
 conda env update --file updated_environment.yml
-```
-If that doesn't do the job, try:
-```bash
-conda env update --file environment.yml
 ```
 
 ### Submodules
