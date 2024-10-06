@@ -90,19 +90,19 @@ pip install mujoco-py
 
 ## Run code
 
-There are three parts to the method.
+There are three parts to the method. The important scripts are stored under the train_reutilization folder.
 
 ### 1. Train the toy
 Update the config under configs/toy_config.py if necessary. Start the training with
 ```bash
-python runner.py
+python run_toy_training.py
 ```
 This will save the results in the folder output.
 
 ### 2. Train low-level policy for new agent
 Parallely train the low-level-controller. Important file is train_low_level_policy.py. In that file, import the config from submodules/SAC/env_configs. This defines which experiment to start. Then run the file with 
 ```bash
-python train_low_level_policy.py
+python train_reutilization/train_low_level_policy.py
 ```
 The results will be saved in the folder output/low_level_policy.
 
@@ -111,16 +111,26 @@ The results will be saved in the folder output/low_level_policy.
 If more than one task should be learned, the striding predictor should be learned. First update the inference path with the path from the toy training and the complex_agent_config with the output from the low-level policy training. (Idea: learn the striding predictor with the low-level controller)
 
 ```bash
-python train_striding_predictor.py
+python train_reutilization/train_striding_predictor.py
 ```
 
 #### 3.2 Relearn the high-level policy
 The other option is to learn the high-level policy from scratch. Also here, the inference path and the complex_agent_config have to be updated. Then run the training.
 
 ```bash
-python train_high_level_policy.py
+python train_reutilization/train_high_level_policy.py
 ```
 
+### 4. Visualize results
+Some utility scripts are stored under the vis_utils folder. The training of the algorithms save the weights of the models, trajectories of the agents, as well as a progress.csv with the loss/rewards histories. Some files for visualizing those are:
+
+- **plot_from_csv.py**: Plots the reward/loss history form the progress.csv
+- **gif_from_video**: turns video into gif to visualize in VSCode
+- **plot_latent.py**: Plots tsne from the toy training
+- **test_tasks**: Loads models from retraining high_policy and plots trajetories.
+
+
+# TODO: FINAL RESULTS FOLDER, GO THROUGH SAC ALGOS..., Readme with plots in final results folder
 
 ## Troubleshooting
 
