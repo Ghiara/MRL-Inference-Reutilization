@@ -49,6 +49,10 @@ conda activate inference-reutilization
 
 In case you need to update an existing environment, you can run
 ```bash
+conda env update --file updated_environment.yml
+```
+If that doesn't do the job, try:
+```bash
 conda env update --file environment.yml
 ```
 
