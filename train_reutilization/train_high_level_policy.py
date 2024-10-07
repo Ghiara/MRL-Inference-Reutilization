@@ -254,7 +254,7 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                 '''
                 Get High-Level Action
                 '''
-                action_prev = high_level_controller.choose_action(obs.squeeze(), mu.cpu().detach().numpy().squeeze(), use_torch=True, max_action=True, sigmoid=True).squeeze()
+                action_prev = high_level_controller.choose_action(obs.squeeze(), mu.cpu().detach().numpy().squeeze(), use_torch=True, max_action=False, sigmoid=True).squeeze()
 
                 '''
                 
@@ -328,16 +328,16 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
                 Calculate low-level reward. Penalize too many steps with beta
                 '''
                 if base_task_pred in [env.config.get('tasks',{}).get('goal_front')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['goal_front']].detach().cpu().numpy()-env.sim.data.qpos[0]+beta*sim_time_steps)/np.abs(action_normalize)
+                    low_level_r = - np.abs(action[env.config['tasks']['goal_front']].detach().cpu().numpy()-env.sim.data.qpos[0])/np.abs(action_normalize) - beta * sim_time_steps
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('goal_back')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['goal_back']].detach().cpu().numpy()-env.sim.data.qpos[0]+beta*sim_time_steps)/np.abs(action_normalize)
+                    low_level_r = - np.abs(action[env.config['tasks']['goal_back']].detach().cpu().numpy()-env.sim.data.qpos[0])/np.abs(action_normalize) - beta * sim_time_steps
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('forward_vel')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['forward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0]+beta*sim_time_steps)/np.abs(action[env.config['tasks']['forward_vel']].item())
+                    low_level_r = - np.abs(action[env.config['tasks']['forward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0])/np.abs(action[env.config['tasks']['forward_vel']].item()) - beta * sim_time_steps
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('backward_vel')]:
-                    low_level_r = - np.abs(action[env.config['tasks']['backward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0]+beta*sim_time_steps)/np.abs(action[env.config['tasks']['backward_vel']].item())
+                    low_level_r = - np.abs(action[env.config['tasks']['backward_vel']].detach().cpu().numpy()-env.sim.data.qvel[0])/np.abs(action[env.config['tasks']['backward_vel']].item()) - beta * sim_time_steps
                     low_level_r = np.clip(low_level_r, -2, 1)
                 elif base_task_pred in [env.config.get('tasks',{}).get('stand_front')]:
                     low_level_r = - np.abs(action[env.config['tasks']['stand_front']].detach().cpu().numpy()-env.sim.data.qpos[2])/np.abs(action[env.config['tasks']['stand_front']].item()) - beta * sim_time_steps
@@ -543,6 +543,9 @@ if __name__ == "__main__":
     # TODO: Do with json load for future
     from experiments_configs.half_cheetah_multi_env import config as env_config
 
+    '''
+    Define inference module to be reused
+    '''
     inference_path = '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm'
 
     '''
