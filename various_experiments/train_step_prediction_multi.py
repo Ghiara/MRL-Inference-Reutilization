@@ -19,7 +19,7 @@ import imageio
 import rlkit.torch.pytorch_util as ptu
 from tigr.task_inference.prediction_networks import DecoderMDP, ExtendedDecoderMDP
 import matplotlib.pyplot as plt
-from replay_memory import Memory
+from various_experiments.replay_memory import Memory
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
@@ -61,7 +61,7 @@ def log_all(agent, path, q1_loss, policy_loss, rew, episode, save_network='high_
     '''
 
     # TODO: save both vf losses (maybe with arg)
-    def save_plot(loss_history, name:str, path='/home/ubuntu/juan/melts/experiment_plots', figure_size: Tuple[int,int] = (20, 10)):
+    def save_plot(loss_history, name:str, path=f'{os.getcwd()}/experiment_plots', figure_size: Tuple[int,int] = (20, 10)):
         def remove_outliers_iqr(data):
             Q1 = np.percentile(data, 25)
             Q3 = np.percentile(data, 75)

@@ -8,6 +8,7 @@ from experiments.config_modules.algorithm import inference_trainer_config, polic
 from experiments.config_modules.exploration import *
 
 from smrl.data_management.replay_buffers import *
+import os
 
 # Inference buffer: ContextReplayBuffer
 context_buffer = dict(
@@ -117,5 +118,5 @@ if __name__ == "__main__":
         run_experiment(
             config,
             multithreading=True,
-            log_dir='/home/ubuntu/juan/Meta-RL/data/delete'
+            log_dir=f'{os.getcwd()}/data/delete'
         )

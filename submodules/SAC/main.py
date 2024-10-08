@@ -35,7 +35,7 @@ record_video_every = 50
 def log_all(agent, path, q1_loss, policy_loss, rew, traj_len, episode):
     '''
     # Save under structure:
-    # - /home/ubuntu/juan/Meta-RL/experiments_transfer_function/<name_of_experiment>
+    # - {os.getcwd()}/experiments_transfer_function/<name_of_experiment>
     #     - plots
     #         - mean_reward_history
     #         - qf_loss
@@ -47,7 +47,7 @@ def log_all(agent, path, q1_loss, policy_loss, rew, traj_len, episode):
     '''
 
         # TODO: save both vf losses (maybe with arg)
-    def save_plot(loss_history, name:str, path='/home/ubuntu/juan/Meta-RL/evaluation/transfer_function/one-sided/', figure_size: Tuple[int,int] = (20, 10)):
+    def save_plot(loss_history, name:str, path=f'{os.getcwd()}/evaluation/transfer_function/one-sided/', figure_size: Tuple[int,int] = (20, 10)):
         def remove_outliers_iqr(data):
             Q1 = np.percentile(data, 25)
             Q3 = np.percentile(data, 75)
@@ -179,7 +179,7 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
     traj_len = []
 
 
-    path = f'/home/ubuntu/juan/Meta-RL/experiments_transfer_function/{experiment_name}/'
+    path = f'{os.getcwd()}/experiments_transfer_function/{experiment_name}/'
     os.makedirs(os.path.dirname(path), exist_ok=True)
     file_path = path + '/config.json'
     with open(file_path, "w") as json_file:

@@ -30,7 +30,7 @@ import imageio
 import json
 
 config = dict(
-    experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
+    experiments_repo = f'{os.getcwd()}/experiments_transfer_function/',
     experiment_name = 'hopper_dt0.01_skipframe1',
     epoch = 7700,
 )
@@ -107,7 +107,7 @@ def create_video():
     obs = env.reset()[0]
     w=env.screen_width
     h=env.screen_height
-    video_dir = "/home/ubuntu/juan/Meta-RL/evaluation/videos_of_transfer/"
+    video_dir = f"{os.getcwd()}/evaluation/videos_of_transfer/"
     os.makedirs(os.path.dirname(video_dir), exist_ok=True)
     frames = []
     env.update_task(task)

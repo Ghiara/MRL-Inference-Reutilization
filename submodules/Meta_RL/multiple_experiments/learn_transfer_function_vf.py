@@ -13,8 +13,8 @@ from smrl.trainers.transfer_function import TransferFunction, RewardPredictor, V
 from meta_envs.toy_goal import Toy1D
 from meta_envs.mujoco.cheetah import HalfCheetahEnvExternalTask
 from smrl.policies.exploration import RandomPolicy, RandomMemoryPolicy, MultiRandomMemoryPolicy
-from transfer_function.PathGenerator import RolloutCoordinator
-from transfer_function.stacked_replay_buffer import StackedReplayBuffer
+from smrl.transfer_function.PathGenerator import RolloutCoordinator
+from smrl.transfer_function.stacked_replay_buffer import StackedReplayBuffer
 from datetime import datetime
 import pytz
 import rlkit.torch.pytorch_util as ptu
@@ -254,7 +254,7 @@ class ActionSpaceTransferLearning:
 
             
 # TODO: save both vf losses (maybe with arg)
-def save_plot(loss_history, name:str, new_repo, path='/home/ubuntu/juan/Meta-RL/evaluation/transfer_function/one-sided/'):
+def save_plot(loss_history, name:str, new_repo, path=f'{os.getcwd()}/evaluation/transfer_function/one-sided/'):
     path = path + new_repo
     os.makedirs(os.path.dirname(path), exist_ok=True)
 

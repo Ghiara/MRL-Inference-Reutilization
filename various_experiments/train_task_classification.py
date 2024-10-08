@@ -91,7 +91,7 @@ class Memory():
 def log_all(agent, path, q1_loss, policy_loss, rew, episode):
     '''
     # Save under structure:
-    # - /home/ubuntu/juan/Meta-RL/experiments_transfer_function/<name_of_experiment>
+    # - {os.getcwd()}/experiments_transfer_function/<name_of_experiment>
     #     - plots
     #         - mean_reward_history
     #         - qf_loss
@@ -103,7 +103,7 @@ def log_all(agent, path, q1_loss, policy_loss, rew, episode):
     '''
 
     # TODO: save both vf losses (maybe with arg)
-    def save_plot(loss_history, name:str, path='/home/ubuntu/juan/Meta-RL/evaluation/transfer_function/one-sided/'):
+    def save_plot(loss_history, name:str, path=f'{os.getcwd()}/evaluation/transfer_function/one-sided/'):
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
         plt.figure()
@@ -337,7 +337,7 @@ def create_tsne(latent_variables, task_labels, path):
     plt.savefig(save_as)
     plt.close()
 
-def save_plot(loss_history, name:str, path='/home/ubuntu/juan/melts/plots'):
+def save_plot(loss_history, name:str, path=f'{os.getcwd()}/plots'):
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
         plt.figure()

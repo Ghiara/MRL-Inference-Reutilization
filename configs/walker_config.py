@@ -1,5 +1,6 @@
 # default experiment settings
 # all experiments should modify these settings only as needed
+import os
 walker_config = dict(
     env_name='walker-multi-task',
     env_params=dict(
@@ -101,7 +102,7 @@ walker_config = dict(
         train_val_percent=1.0,  # percentage of train samples vs. validation samples
         eval_interval=50,  # interval for evaluation with validation data and possible early stopping
         early_stopping_threshold=500,  # minimal epochs before early stopping after new minimum was found
-        temp_folder='/home/ubuntu/juan/melts/temp_cemrl/'  # helper folder for storing encoder and decoder weights while training
+        temp_folder=f'{os.getcwd()}/temp_cemrl/'  # helper folder for storing encoder and decoder weights while training
     ),
     PCGrad_params = dict(
         use_PCGrad=False,
@@ -110,7 +111,7 @@ walker_config = dict(
                        'random_prob_task'][0]
     ),
     dpmm_params=dict(
-        save_dir='/home/ubuntu/juan/melts/temp_bnp/',
+        save_dir=f'{os.getcwd()}/temp_bnp/',
         start_epoch=0,
         gamma0=5.0,
         num_lap=2,

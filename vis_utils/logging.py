@@ -30,7 +30,7 @@ def log_all(agent, path, q1_loss, policy_loss, rew, traj_len, episode):
     '''
 
         # TODO: save both vf losses (maybe with arg)
-    def save_plot(loss_history, name:str, path='/home/ubuntu/juan/Meta-RL/evaluation/transfer_function/one-sided/', figure_size: Tuple[int,int] = (20, 10)):
+    def save_plot(loss_history, name:str, path=f'{os.getcwd()}/evaluation/transfer_function/one-sided/', figure_size: Tuple[int,int] = (20, 10)):
         def remove_outliers_iqr(data):
             Q1 = np.percentile(data, 25)
             Q3 = np.percentile(data, 75)

@@ -47,7 +47,7 @@ def log_all(agent, path, q1_loss, policy_loss, rew, traj_len, episode):
     '''
 
     # TODO: save both vf losses (maybe with arg)
-    def save_plot(loss_history, name:str, path='/home/ubuntu/juan/Meta-RL/evaluation/transfer_function/one-sided/'):
+    def save_plot(loss_history, name:str, path=f'{os.getcwd()}/evaluation/transfer_function/one-sided/'):
         def moving_average(data, window_size):
             window = np.ones(int(window_size))/float(window_size)
             return np.convolve(data, window, 'same')
@@ -139,7 +139,7 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
     traj_len = []
 
 
-    path = f'/home/ubuntu/juan/Meta-RL/experiments_transfer_function/{experiment_name}/'
+    path = f'{os.getcwd()}/experiments_transfer_function/{experiment_name}/'
     os.makedirs(os.path.dirname(path), exist_ok=True)
     file_path = path + '/config.json'
     with open(file_path, "w") as json_file:

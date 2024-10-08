@@ -1,7 +1,7 @@
 import numpy as np
 from model import PolicyNetwork, QvalueNetwork, ValueNetwork
 import torch
-from various_experiments.replay_memory import Memory, Transition
+from replay_memory import Memory, Transition
 from torch import from_numpy
 from torch.optim.adam import Adam
 import matplotlib.pyplot as plt
@@ -12,7 +12,7 @@ import pytz
 
 class SAC:
     def __init__(self, n_states, n_actions, task_dim, hidden_layers_actor, hidden_layers_critic, memory_size, batch_size, gamma, alpha, lr, action_bounds,
-                 reward_scale, path='/home/ubuntu/juan/Meta-RL/data/transfer_function/hopper/', out_actions=None, pretrained=None, device=None):
+                 reward_scale, path=f'{os.getcwd()}/data/transfer_function/hopper/', out_actions=None, pretrained=None, device=None):
         self.n_states = n_states
         self.n_actions = n_actions
         self.task_dim = task_dim

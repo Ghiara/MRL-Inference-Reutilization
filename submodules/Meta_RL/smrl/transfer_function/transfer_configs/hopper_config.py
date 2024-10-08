@@ -1,9 +1,10 @@
 from collections import OrderedDict
 from meta_envs.mujoco.hopper import HopperGoal
+import os
 
 config = OrderedDict(
         
-        save_model_path = '/home/ubuntu/juan/Meta-RL/data/transfer_function/hopper/',
+        save_model_path = f'{os.getcwd()}/data/transfer_function/hopper/',
 
         environment = HopperGoal(),
 

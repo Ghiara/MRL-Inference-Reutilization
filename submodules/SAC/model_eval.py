@@ -612,7 +612,7 @@ if __name__ == "__main__":
 
         model_evaluation(
             path,
-            save_dir='/home/ubuntu/juan/Meta-RL/experiments_transfer_function/chane_after_task_250/eval',
+            save_dir=f'{os.getcwd()}/experiments_transfer_function/chane_after_task_250/eval',
             config=config,
             # save_dir = './data/delete',
             create_video=True,

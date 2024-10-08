@@ -57,7 +57,7 @@ policy_update_steps = 512
 def log_all(agent, path, q1_loss, policy_loss, rew, episode, save_network='high_level', additional_plot=False):
     '''
     # Save under structure:
-    # - /home/ubuntu/juan/Meta-RL/experiments_transfer_function/<name_of_experiment>
+    # - {os.getcwd()}/experiments_transfer_function/<name_of_experiment>
     #     - plots
     #         - mean_reward_history
     #         - qf_loss
@@ -69,7 +69,7 @@ def log_all(agent, path, q1_loss, policy_loss, rew, episode, save_network='high_
     '''
 
     # TODO: save both vf losses (maybe with arg)
-    def save_plot(loss_history, name:str, path='/home/ubuntu/juan/melts/experiment_plots', figure_size: Tuple[int,int] = (20, 10)):
+    def save_plot(loss_history, name:str, path=f'{os.getcwd()}/experiment_plots', figure_size: Tuple[int,int] = (20, 10)):
         def remove_outliers_iqr(data):
             Q1 = np.percentile(data, 25)
             Q3 = np.percentile(data, 75)

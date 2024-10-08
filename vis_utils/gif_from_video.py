@@ -98,7 +98,7 @@ if __name__ == "__main__":
         # '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_04_15_20_42_34_default_true_gmm',
         # '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_04_17_20_51_34_default_true_gmm'
         # '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_04_17_20_51_34_default_true_gmm'
-        # '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/half_cheetah_multi',
+        # '{os.getcwd()}/experiments_transfer_function/half_cheetah_multi',
         # '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_04_23_12_27_55_default_true_gmm',
         # '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_04_22_15_43_33_default_true_gmm'
         # '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_04_26_16_36_36_default_true_gmm'

@@ -439,11 +439,15 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
         
 
 if __name__ == "__main__":
-    # TODO: Do with json load for future
-    # from experiments_configs.half_cheetah_multi_env import config as env_config
 
+    '''
+    Define inference model trained on encoder
+    '''
     inference_path = '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm'
-
+    
+    '''
+    Define low-level policy for new agent
+    '''
     # complex_agent = dict(
     #     environment = WalkerMulti,
     #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',

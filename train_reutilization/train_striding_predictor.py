@@ -229,7 +229,7 @@ def create_tsne(latent_variables, task_labels, path):
     plt.savefig(save_as)
     plt.close()
 
-def save_plot(loss_history, name:str, path='/home/ubuntu/juan/melts/plots'):
+def save_plot(loss_history, name:str, path=f'{os.getcwd()}/plots'):
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
         plt.figure()
@@ -449,7 +449,7 @@ def rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor, tran
             torch.save(decoder.state_dict(), file)
         # video = False
         if video:
-            # save_plot(np.array(loss_history), name='task_loss', path='/home/ubuntu/juan/melts/delete_videos')
+            # save_plot(np.array(loss_history), name='task_loss', path=f'{os.getcwd()}/delete_videos')
             size = frames[0].shape
 
             # Save to corresponding repo
@@ -518,7 +518,7 @@ def rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor, tran
             plt.subplots_adjust(hspace=0.4)
 
             # Save the figure to a file
-            dir = Path(os.path.join('/home/ubuntu/juan/melts/trajectories', experiment_name, current_inference_path_name, 'beta0.1_old'))
+            dir = Path(os.path.join('{os.getcwd()}/trajectories', experiment_name, current_inference_path_name, 'beta0.1_old'))
             filename = os.path.join(dir,f"epoch_{episode}.png")
             filename = os.path.join(dir,f"epoch_{episode}.pdf")
 

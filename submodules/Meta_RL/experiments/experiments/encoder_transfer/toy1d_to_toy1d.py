@@ -6,6 +6,7 @@ from experiments.config_modules.policy import policy_networks
 from experiments.config_modules.algorithm import only_policy_training, training_config
 
 from smrl.utility.ops import deep_dictionary_update
+import os
 
 
 config = dict(
@@ -455,5 +456,5 @@ if __name__ == "__main__":
         run_experiment(
             config,
             multithreading=True,
-            log_dir='/home/ubuntu/juan/Meta-RL/data/pretrained_for_transfer'
+            log_dir=f'{os.getcwd()}/data/pretrained_for_transfer'
         )

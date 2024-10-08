@@ -1,6 +1,7 @@
 # default experiment settings
 # all experiments should modify these settings only as needed
 import time
+import os
 toy_config = dict(
     env_name='toy1d-multi-task',
     simple_env = True,
@@ -112,7 +113,7 @@ toy_config = dict(
         train_val_percent=1.0,  # percentage of train samples vs. validation samples
         eval_interval=50,  # interval for evaluation with validation data and possible early stopping
         early_stopping_threshold=1000,  # minimal epochs before early stopping after new minimum was found
-        temp_folder=f'/home/ubuntu/juan/melts/temp_cemrl/{time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())}'  # helper folder for storing encoder and decoder weights while training
+        temp_folder=os.path.join(os.getcwd(), 'melts', 'temp_cemrl',time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime()))  # helper folder for storing encoder and decoder weights while training
     ),
     PCGrad_params = dict(
         use_PCGrad=False,
@@ -121,7 +122,7 @@ toy_config = dict(
                        'random_prob_task'][0]
     ),
     dpmm_params=dict(
-        save_dir=f'/home/ubuntu/juan/melts/temp_bnp/{time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())}',
+        save_dir=os.path.join(os.getcwd(), 'melts', 'temp_bnp',time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())),
         start_epoch=0,
         gamma0=5.0,
         num_lap=2,

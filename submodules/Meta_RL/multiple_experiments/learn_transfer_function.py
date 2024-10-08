@@ -192,7 +192,7 @@ class ActionSpaceTransferLearning:
                     new_repo = f'{self.date.strftime("%Y-%m-%d_%H-%M-%S")}/'
                     save_plot(self.policy_loss_history, name='policy_loss', new_repo=new_repo)
 
-def save_plot(loss_history, name:str, new_repo, path='/home/ubuntu/juan/Meta-RL/evaluation/transfer_function/traj_for_policy/'):
+def save_plot(loss_history, name:str, new_repo, path=f'{os.getcwd()}/evaluation/transfer_function/traj_for_policy/'):
     path = path + new_repo
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
@@ -208,7 +208,7 @@ if __name__=="__main__":
 
     config = OrderedDict(
         
-        save_model_path = '/home/ubuntu/juan/Meta-RL/data/transfer_function/traj_for_policy/',
+        save_model_path =f'{os.getcwd()}/data/transfer_function/traj_for_policy/',
 
         obs_dim_complex = 20,
         act_simple_dim = 1,
@@ -223,7 +223,7 @@ if __name__=="__main__":
         max_traj_len = 100,
         only_reward_epochs = 150,
 
-        # pretrained_reward_predictor = '/home/ubuntu/juan/Meta-RL/data/transfer_function/traj_for_policy/2023-12-17_14-37-29/reward_model/epoch_100.pth',
+        # pretrained_reward_predictor =f'{os.getcwd()}/data/transfer_function/traj_for_policy/2023-12-17_14-37-29/reward_model/epoch_100.pth',
         pretrained_reward_predictor = None,
         pretrained_transfer_function = None,
 

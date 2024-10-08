@@ -1,9 +1,10 @@
 from collections import OrderedDict
 from meta_envs.mujoco.walker2d import WalkerGoal
+import os
 
 config = OrderedDict(
         
-        save_model_path = '/home/ubuntu/juan/Meta-RL/data/transfer_function/walker/',
+        save_model_path = f'{os.getcwd()}/data/transfer_function/walker/',
 
         environment = WalkerGoal(),
 

@@ -346,7 +346,7 @@ def plot_latent_over_goal(trajectory_files: List[str]) -> Tuple[Figure, plt.Axes
 if __name__ == "__main__":
     from pathlib import Path
 
-    p = Path("/home/ubuntu/juan/Meta-RL/evaluation/toy1d-cont_buffers/toy1d_rand_Base-config_2023-11-14_10-41-02/")
+    p = Path("{os.getcwd()}/evaluation/toy1d-cont_buffers/toy1d_rand_Base-config_2023-11-14_10-41-02/")
     
     print("Plotting training curves ...")
     plot_training_curves(p.joinpath("progress.csv"))

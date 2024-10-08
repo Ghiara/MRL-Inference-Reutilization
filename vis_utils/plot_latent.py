@@ -15,7 +15,7 @@ PLOT_LIST = []
 MARKERS = ['.', '^', 's', 'p', '*', 'X', 'h', 'd', '+', 'P']
 
 
-def main(path, run_name=None, show_='last', save=True, use_tsne=True, DIM_RED=2, hardcoded='/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_07_11_15_51_58_default_true_gmm/walker_full_30_06'):
+def main(path, run_name=None, show_='last', save=True, use_tsne=True, DIM_RED=2, hardcoded=f'{os.getcwd()}/output/toy1d-multi-task/2024_07_11_15_51_58_default_true_gmm/walker_full_30_06'):
    
     data_dir = os.path.join(path, 'tensorboard')
     # data_dir = '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_07_11_15_51_58_default_true_gmm'

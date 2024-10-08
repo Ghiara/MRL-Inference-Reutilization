@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from meta_envs.mujoco.cheetah import HalfCheetahEnvExternalTask, HalfCheetahGoal
-
+import os
 env_kwargs = {
     "n_train_tasks": 100,
     "n_eval_tasks": 25,
@@ -12,7 +12,7 @@ env_args = []
 
 config = OrderedDict(
         
-        save_model_path = '/home/ubuntu/juan/Meta-RL/data/transfer_function/extended_reward/random_change_task/prob_0.7/',
+        save_model_path = f'{os.getcwd()}/data/transfer_function/extended_reward/random_change_task/prob_0.7/',
 
         environment = HalfCheetahEnvExternalTask(*env_args, **env_kwargs),
 

@@ -16,7 +16,7 @@ import os
 
 
 
-def save_plot(loss_histories, names, plot_name, path='/home/ubuntu/juan/melts/experiment_plots', figure_size: Tuple[int,int] = (20, 10), fill: bool = True, rolling_window: int = 50, fill_scaling_factor: float = 1.0, kernel_width: int = None, scale_param: int = None):
+def save_plot(loss_histories, names, plot_name, path=f'{os.getcwd()}/experiment_plots', figure_size: Tuple[int,int] = (20, 10), fill: bool = True, rolling_window: int = 50, fill_scaling_factor: float = 1.0, kernel_width: int = None, scale_param: int = None):
     def format_label(label):
         words = label.split('_')
         return ' '.join(word.capitalize() for word in words)
@@ -120,7 +120,7 @@ def load_and_plot(csv_files, column_name, plot_name, rows_range=(0,2400)):
         print(f"The average of '{column_name}' in file '{csv_file}' is {average_loss}")
 
     # Call the save_plot function with all the extracted data
-    save_plot(loss_histories, names, plot_name, path='/home/ubuntu/juan/melts/experiment_plots', figure_size=(20, 10), fill=True, rolling_window=50, fill_scaling_factor=1.0)
+    save_plot(loss_histories, names, plot_name, path=f'{os.getcwd()}/experiment_plots', figure_size=(20, 10), fill=True, rolling_window=50, fill_scaling_factor=1.0)
 csv_file_paths = dict(
     paths = ['/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_02_15_23_09_default_true_gmm/cheetah_retrain_beta_0.1/progress.csv',
              '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm/progress.csv',
