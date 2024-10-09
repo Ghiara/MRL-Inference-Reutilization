@@ -1,8 +1,8 @@
 [submodule "rlkit"]
-	path = submodules/rlkit
+	path = submodules/Meta_RL/submodules/rlkit
 	url = https://github.com/rail-berkeley/rlkit.git
 [submodule "symmetrizer"]
-	path = submodules/symmetrizer
+	path = submodules/Meta_RL/submodules/symmetrizer
 	url = https://github.com/ElisevanderPol/symmetrizer.git
 [submodule "meta-environments"]
 	path = submodules/meta-environments
