@@ -88,6 +88,30 @@ pip install -e .
 
 By running `conda list` you can check if all packages have been installed successfully.
 
+### Install Cuda and Pytorch
+```batch
+sudo apt install nvidia-cuda-toolkit
+```
+Check the cuda version
+```batch
+nvcc --version
+```
+Install pytorch:
+```batch
+pip install torch==2.1.0 torchaudio==2.1.0 torchvision==0.16.0
+```
+If you get the following error:
+```bash
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ImportError: cannot import name 'S' from 'sympy' (unknown location)
+```
+This can be solved by:
+```bash
+pip uninstall sympy
+pip install sympy
+```
+
 ### MuJoCo
 
 For running MuJoCo environments, you will need the MuJoCo library binaries which you can download from [here](https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz). You should extract them in the directory */root/.mujoco/mujoco210*. Additionally, you need to set the variable *LD_LIBRARY_PATH* to contain the path to the binaries:
