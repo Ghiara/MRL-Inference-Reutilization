@@ -17,7 +17,7 @@ For more information about the theoretical background, please refer to my Master
 Go to the GitHub repository website and select 'Code' to get an HTTPS or SSH link to the repository.
 Clone the repository to your device, e.g.
 ```bash
-https://github.com/juandelos/MRL-Inference-Reutilization.git
+git clone https://github.com/juandelos/MRL-Inference-Reutilization.git
 ```
 Enter the root directory of this project on your device. The root directory contains this README-file.
 
