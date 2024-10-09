@@ -56,6 +56,12 @@ In case you need to update an existing environment, you can run
 conda env update --file updated_environment.yml
 ```
 
+### Initialize submodules
+```bash
+git submodule init
+git submodule update
+```
+
 ### Submodules
 
 Install the submodules:
@@ -66,8 +72,8 @@ pip install -e ./submodules/meta_rand_envs
 pip install -e ./submodules/Meta_RL/submodules/MRL-analysis-tools-main
 pip install -e ./submodules/rand_param_envs
 pip install -e ./submodules/Meta_RL/submodules/rlkit
-pip install -e ./submodules/Meta_RL/submodules/SAC
-pip install -e ./submodules/Meta_RL/submodules/Meta_RL
+pip install -e ./submodules/SAC
+pip install -e ./submodules/Meta_RL
 pip install -e ./submodules/Meta_RL/submodules/symmetrizer
 ```
 You only need the last submodule if you want to use equivariant networks.
