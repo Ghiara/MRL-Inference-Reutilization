@@ -37,14 +37,6 @@ If that doesn't do the job, try:
 conda env create --file environment.yml
 ```
 This might take some time because it needs to download and install all required packages.
-> 💡 **NOTE**: In case you want to use GPU-accelerated training on NVIDIA-GPUs, *uncomment* the following line in *environment.yml* before running `conda env create`:
-> ```yml
-> #- pytorch-cuda=11.7 # Consider 'cpuonly' instead if you are only running on a CPU
-> ```
-> and *comment out* (or delete) the following line to make sure pytorch is set up to run with CUDA:
-> ```yml
-> - cpuonly
-> ```
 
 Activate the new environment by running (Make sure that no other environment was active before.):
 ```bash
@@ -127,6 +119,13 @@ The python bindings for MuJoCo can be installed with
 ```bash
 pip install mujoco-py
 ```
+
+If running a script that requires mujoco gives you a problem that mentions X11, try runnning this.
+```bash
+export CC=/usr/bin/gcc
+export CXX=/usr/bin/g++
+```
+If that solves it, you can copy that to the .bashrc file.
 
 ----------------------------------------------------------------------------
 
