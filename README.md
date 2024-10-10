@@ -54,22 +54,6 @@ git submodule init
 git submodule update
 ```
 
-### Submodules
-
-Install the submodules:
-```bash
-pip install -e ./CARE
-pip install -e ./submodules/Meta_RL/submodules/meta-environments-main
-pip install -e ./submodules/meta_rand_envs
-pip install -e ./submodules/Meta_RL/submodules/MRL-analysis-tools-main
-pip install -e ./submodules/rand_param_envs
-pip install -e ./submodules/Meta_RL/submodules/rlkit
-pip install -e ./submodules/SAC
-pip install -e ./submodules/Meta_RL
-pip install -e ./submodules/Meta_RL/submodules/symmetrizer
-```
-You only need the last submodule if you want to use equivariant networks.
-
 ### Locally install package
 Install package locally.
 
@@ -126,6 +110,21 @@ export CC=/usr/bin/gcc
 export CXX=/usr/bin/g++
 ```
 If that solves it, you can copy that to the .bashrc file.
+
+### Submodules
+
+Install the submodules:
+```bash
+pip install -e ./CARE
+pip install -e ./submodules/Meta_RL/submodules/meta-environments-main
+pip install -e ./submodules/meta_rand_envs
+pip install -e ./submodules/Meta_RL/submodules/MRL-analysis-tools-main
+pip install -e ./submodules/rand_param_envs
+pip install -e ./submodules/Meta_RL/submodules/rlkit
+pip install -e ./submodules/SAC
+pip install -e ./submodules/Meta_RL
+pip install -e ./submodules/Meta_RL/submodules/symmetrizer
+```
 
 ----------------------------------------------------------------------------
 
