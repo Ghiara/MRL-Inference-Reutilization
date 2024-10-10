@@ -46,7 +46,7 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
     change_task = False
     traj_len = []
 
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    os.makedirs(path, exist_ok=True)
     file_path = path + '/config.json'
     with open(file_path, "w") as json_file:
         json.dump(config, json_file)

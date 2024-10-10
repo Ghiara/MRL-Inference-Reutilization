@@ -12,7 +12,7 @@ class HalfCheetahMixtureEnv(HalfCheetahEnv, utils.EzPickle):
         self.screen_height = 400
         self.screen_width = 400
         self.termination_possible = False
-        super().__init__(frame_skip=5, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.observation_space = Box(
                 low=-np.inf, high=np.inf, shape=(20,), dtype=np.float64
             )

@@ -10,7 +10,7 @@ from gym.spaces import Box
 class WalkerMulti(Walker2dEnv):
     # rewrite this to give as input the dictionary
     def __init__(self, config, healthy_scale = 1, render_mode: str = 'rgb_array', reached_goal_threshold=0.05, *args, **kwargs):
-        super().__init__(render_mode=render_mode, frame_skip=5, *args, **kwargs)
+        super().__init__(render_mode=render_mode, *args, **kwargs)
         self.observation_space = Box(
                 low=-np.inf, high=np.inf, shape=(20,), dtype=np.float64
             )
