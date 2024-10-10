@@ -25,6 +25,8 @@ meta_rand_envs/metaworld.py
 meta_rand_envs/metaworld_benchmarks.py
 meta_rand_envs/nptt_half_cheetah_multi_env.py
 meta_rand_envs/toy1d_multi.py
+meta_rand_envs/toy1d_multi_new.py
+meta_rand_envs/toy2d_multi.py
 meta_rand_envs/walker2d_changing_rand_params.py
 meta_rand_envs/walker2d_changing_vel.py
 meta_rand_envs/walker2d_non_stationary_rand_params.py

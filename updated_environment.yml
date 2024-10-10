@@ -117,9 +117,9 @@ dependencies:
   - python=3.10.13=h955ad1f_0
   - python-dateutil=2.8.2=pyhd3eb1b0_0
   - python-tzdata=2023.3=pyhd3eb1b0_0
-  - pytorch=2.1.0=py3.10_cuda11.8_cudnn8.7.0_0
-  - pytorch-cuda=11.8=h7e8668a_5
-  - pytorch-mutex=1.0=cuda
+  # - pytorch=2.1.0=py3.10_cuda11.8_cudnn8.7.0_0
+  # - pytorch-cuda=11.8=h7e8668a_5
+  # - pytorch-mutex=1.0=cuda
   - pytz=2023.3.post1=py310h06a4308_0
   - pyyaml=6.0.1=py310h5eee18b_0
   - qt-main=5.15.2=h53bd1ea_10
@@ -134,9 +134,9 @@ dependencies:
   - threadpoolctl=2.2.0=pyh0d69192_0
   - tk=8.6.12=h1ccaba5_0
   - tomli=2.0.1=py310h06a4308_0
-  - torchaudio=2.1.0=py310_cu118
+  # - torchaudio=2.1.0=py310_cu118
   - torchtriton=2.1.0=py310
-  - torchvision=0.16.0=py310_cu118
+  # - torchvision=0.16.0=py310_cu118
   - tornado=6.3.3=py310h5eee18b_0
   - tqdm=4.65.0=py310h2f386ee_0
   - typing_extensions=4.7.1=py310h06a4308_0
@@ -281,4 +281,8 @@ dependencies:
       - wcwidth==0.2.13
       - werkzeug==3.0.1
       - zipp==3.17.0
+      - torch==2.1.0 
+      - torchaudio==2.1.0 
+      - torchvision==0.16.0
+
 prefix: /home/ubuntu/miniconda3/envs/inference-reutilization
