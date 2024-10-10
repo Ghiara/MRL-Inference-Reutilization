@@ -54,16 +54,6 @@ git submodule init
 git submodule update
 ```
 
-### Locally install package
-Install package locally.
-
-Please run (from the root directory):
-```batch
-pip install -e .
-```
-
-By running `conda list` you can check if all packages have been installed successfully.
-
 ### Install Cuda and Pytorch
 ```batch
 sudo apt install nvidia-cuda-toolkit
@@ -74,8 +64,10 @@ nvcc --version
 ```
 Install pytorch:
 ```batch
+conda install pytorch torchvision torchaudio cudatoolkit=11.8 -c pytorch
 pip install torch==2.1.0 torchaudio==2.1.0 torchvision==0.16.0
 ```
+This is a workaround for cuda version 10.1 which seems to work. For version 11.1 and further, it should be easier.
 If you get the following error:
 ```bash
 Traceback (most recent call last):
@@ -183,6 +175,8 @@ In case a simple encoder is to be used, the implementation by Durmann can be use
    unset LD_PRELOAD
    ```
 
+ **NOTE**
+The results shown in final_results for the agents walker and hopper might differ if rerun. The reason is that these agent were trained with a different dt and skip_frames as in the source code from the mujoco installation. To replicate the experiments, the source code must be change to mimic the dt and skip_frames of the cheetah.
 ----------------------------------------------------------------------------
 
 ## References
