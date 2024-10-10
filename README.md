@@ -176,7 +176,8 @@ In case a simple encoder is to be used, the implementation by Durmann can be use
    ```
 2. For error: Could not load the Qt platform plugin "xcb"... check the follwoing [link](https://stackoverflow.com/questions/71088095/opencv-could-not-load-the-qt-platform-plugin-xcb-in-even-though-it-was-fou).
 
- **NOTE**
+## **NOTE**
+
 The results shown in final_results for the agents walker and hopper might differ if rerun. The reason is that these agent were trained with a different dt and skip_frames as in the source code from the mujoco installation. To replicate the experiments, the source code must be change to mimic the dt and skip_frames of the cheetah.
 ----------------------------------------------------------------------------
 
