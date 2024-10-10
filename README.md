@@ -94,7 +94,9 @@ For running MuJoCo environments, you will need the MuJoCo library binaries which
 
 ```bash
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/.mujoco/mujoco210/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 ```
+If you don't want to set it every time you open a new terminal, write the export commands in the ~/.bashrc file.
 
 Please read the [documentation](https://github.com/openai) *carefully* (It contains valuable hints on troubleshooting).
 
