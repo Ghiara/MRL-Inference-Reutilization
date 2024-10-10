@@ -14,4 +14,4 @@
 
 [submodule "CARE"]
 	path = CARE
-	url = git@github.com:juandelos/bnpy.git
+	url = https://github.com/juandelos/bnpy
