@@ -1,5 +1,5 @@
 import gym
-from gym.envs.mujoco.hopper import HopperEnv
+from sac_envs.base_envs.hopper import HopperEnv
 from gym.utils.ezpickle import EzPickle
 from typing import List, Tuple
 import numpy as np

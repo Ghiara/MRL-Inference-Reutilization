@@ -1,5 +1,5 @@
 import numpy as np
-from gym.envs.mujoco.half_cheetah import HalfCheetahEnv
+from sac_envs.base_envs.half_cheetah import HalfCheetahEnv
 from gym.spaces.box import Box
 from gym import utils
 import mujoco_py

@@ -24,7 +24,7 @@ config = dict(
 
     env = 'hopper_multi',
     # experiment_name = 'Walker_deeper_really_change_task',
-    experiment_name = 'hopper_12_07',
+    experiment_name = 'hopper_multi',
     task_dim = 2,
 
     hidden_layers_actor = [300,300,300,300],

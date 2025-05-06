@@ -1,5 +1,5 @@
 import gym
-from gym.envs.mujoco.walker2d import Walker2dEnv
+from sac_envs.base_envs.walker2d import Walker2dEnv
 from gym.utils.ezpickle import EzPickle
 from typing import List, Tuple
 import numpy as np
