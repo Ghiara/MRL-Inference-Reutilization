@@ -220,17 +220,6 @@ def experiment(variant):
         variant['algo_params']['encoding_mode'],
         variant['algo_params']['sampling_mode']
     )
-    # exploration_replay_buffer = StackedReplayBuffer(
-    #     variant['algo_params']['max_replay_buffer_size'],
-    #     time_steps,
-    #     variant['algo_params']['max_path_length'],
-    #     obs_dim,
-    #     action_dim,
-    #     policy_latent_dim,
-    #     variant['algo_params']['permute_samples'],
-    #     variant['algo_params']['encoding_mode'],
-    #     variant['algo_params']['sampling_mode']
-    # )
 
     # optionally load pre-trained weights
     if variant['path_to_weights'] is not None:
@@ -292,31 +281,7 @@ def experiment(variant):
         variant['util_params']['gpu_id'],
         variant['env_params']['scripted_policy']
         )
-    # if variant['algo_params']['exploration']:
-    #     rollout_coordinator = RolloutCoordinator(
-    #         env,
-    #         variant['simple_env'],
-    #         variant['env_name'],
-    #         variant['env_params'],
-    #         variant['train_or_showcase'],
-    #         agent,
-    #         replay_buffer,
-    #         variant['algo_params']['exploration'],
 
-    #         variant['algo_params']['batch_size_rollout'],
-    #         time_steps,
-
-    #         variant['algo_params']['max_path_length'],
-    #         variant['algo_params']['permute_samples'],
-    #         variant['algo_params']['encoding_mode'],
-    #         variant['util_params']['use_multiprocessing'],
-    #         variant['algo_params']['use_data_normalization'],
-    #         variant['util_params']['num_workers'],
-    #         variant['util_params']['gpu_id'],
-    #         variant['env_params']['scripted_policy'],
-    #         exploration_replay_buffer,
-    #         )
-    
     reconstruction_trainer = AugmentedTrainer(
         encoder,
         decoder,
@@ -350,39 +315,6 @@ def experiment(variant):
         optimizer_class = torch.optim.Adam,
         log_dir=experiment_log_dir
     )
-    # if variant['algo_params']['exploration']:
-    #     reconstruction_trainer = AugmentedTrainer(
-    #         encoder,
-    #         decoder,
-    #         exploration_replay_buffer,
-    #         None,
-    #         variant['algo_params']['batch_size_reconstruction'],
-    #         num_classes,
-    #         latent_dim,
-    #         time_steps,
-    #         variant['reconstruction_params']['lr_decoder'],
-    #         variant['reconstruction_params']['lr_encoder'],
-    #         variant['reconstruction_params']['alpha_kl_z'],
-    #         variant['reconstruction_params']['beta_euclid'],
-    #         variant['reconstruction_params']['gamma_sparsity'],
-    #         variant['reconstruction_params']['regularization_lambda'],
-    #         variant['reconstruction_params']['use_state_diff'],
-    #         variant['env_params']['state_reconstruction_clip'],
-    #         variant['algo_params']['use_data_normalization'],
-
-    #         variant['reconstruction_params']['train_val_percent'],
-    #         variant['reconstruction_params']['eval_interval'],
-    #         variant['reconstruction_params']['early_stopping_threshold'],
-    #         experiment_log_dir,
-
-    #         variant['reconstruction_params']['use_regularization_loss'],
-
-    #         use_PCGrad = variant['PCGrad_params']['use_PCGrad'],
-    #         PCGrad_option = variant['PCGrad_params']['PCGrad_option'],
-    #         optimizer_class = torch.optim.Adam,
-    #         log_dir=experiment_log_dir
-    #     )
-
 
     # PolicyTrainer
     policy_trainer = PolicyTrainer(
