@@ -15,6 +15,7 @@ from typing import Tuple
 
 from tqdm import tqdm
 import os
+import argparse
 
 '''
 Choose the experiment to run here
@@ -241,7 +242,31 @@ def train(env, agent, epochs, experiment_name, save_after_episodes, policy_updat
             csv_path = f'{path}/progress.csv'
             df.to_csv(csv_path, index=False)
 
+def load_config(env_name):
+    if env_name == "cheetah":
+        from experiments_configs.half_cheetah_multi_env import config
+    elif env_name == "hopper":
+        from experiments_configs.hopper_multi import config
+    elif env_name == "walker2d":
+        from experiments_configs.walker_multi import config
+    else:
+        raise ValueError(f"Unsupported environment: {env_name}")
+    return config
+
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="Load environment config.")
+    parser.add_argument(
+        "--env",
+        type=str,
+        choices=["cheetah", "hopper", "walker2d"],
+        default="cheetah",
+        help="Specify the environment to load config for. Default is 'cheetah'."
+    )
+    args = parser.parse_args()
+    
+    config = load_config(args.env)
+    print(config)
 
     '''
     Load environment with agent to be trained
