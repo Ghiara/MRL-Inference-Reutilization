@@ -28,7 +28,7 @@ from typing import Tuple
 from agent import SAC
 from model import ValueNetwork, QvalueNetwork, PolicyNetwork
 from mrl_analysis.utility.data_smoothing import smooth_plot, smooth_fill_between
-from vis_utils.logging import log_all, _frames_to_gif
+from vis_utils.vis_logging import log_all, _frames_to_gif
 
 from mrl_analysis.plots.plot_settings import *
 

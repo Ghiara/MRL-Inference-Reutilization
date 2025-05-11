@@ -104,7 +104,7 @@ def _frames_to_gif(frames: List[np.ndarray], info, gif_path, transform: Callable
             cv2.putText(frame, 'obs: ' + str(info['obs'][i]), (0, 55), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
             cv2.putText(frame, 'action: ' + str(info['action'][i]), (0, 15), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
             cv2.putText(frame, 'task: ' + str(info['base_task'][i]), (0, 75), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
-            cv2.putText(frame, 'task: ' + str(info['task'][i]), (0, 95), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
+            # cv2.putText(frame, 'task: ' + str(info['task'][i]), (0, 95), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (0, 0, 255))
             # Apply transformation if any
             if transform is not None:
                 frame = transform(frame)

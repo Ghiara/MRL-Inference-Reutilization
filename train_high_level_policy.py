@@ -24,6 +24,8 @@ from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
 from typing import Tuple
+import argparse
+import os
 
 from agent import SAC
 from model import ValueNetwork, QvalueNetwork, PolicyNetwork
@@ -31,21 +33,15 @@ from model import ValueNetwork, QvalueNetwork, PolicyNetwork
 from mrl_analysis.utility.data_smoothing import smooth_plot, smooth_fill_between
 from mrl_analysis.plots.plot_settings import *
 
-from vis_utils.logging import log_all, _frames_to_gif
+from vis_utils.vis_logging import log_all, _frames_to_gif
 
 # DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 DEVICE = 'cuda'
 ptu.set_gpu_mode(True)
 
-experiment_name = 'cheetah_max_action'
 # TODO: einheitliches set to device
-simple_env_dt = 0.05
-sim_time_steps = 20
-max_path_len=100
 save_after_episodes = 10
 plot_every = 5
-batch_size = 20
-policy_update_steps = 512
 
 
 def get_encoder(path, shared_dim, encoder_input_dim):
@@ -91,7 +87,13 @@ def get_complex_agent(env, complex_agent_config):
     '''
     # This function is used to load the low-level controller specifide by comlpex_agent_config
     '''
-    pretrained = complex_agent_config['experiments_repo']+complex_agent_config['experiment_name']+f"/models/policy_model/epoch_{complex_agent_config['epoch']}.pth"
+    pretrained = os.path.join(
+        complex_agent_config['experiments_repo'],
+        complex_agent_config['experiment_name'],
+        "models",
+        "policy_model",
+        f"epoch_{complex_agent_config['epoch']}.pth"
+    )
     n_states = env.observation_space.shape[0]
     n_actions = env.action_space.shape[0]
     action_bounds = [env.action_space.low[0], env.action_space.high[0]]
@@ -150,9 +152,12 @@ def multiple_cheetah_to_simple_env_map(obs, next_obs, env):
 
     return simple_observations, next_simple_observations
 
-def rollout(env, encoder, decoder, high_level_controller, step_predictor, transfer_function, 
-            variant, obs_dim, actions_dim, max_path_len, 
-            n_tasks, inner_loop_steps, save_video_path, max_steps=sim_time_steps, beta = 0.1, batch_size=batch_size, policy_update_steps=policy_update_steps):
+def rollout(env, encoder, high_level_controller, 
+            step_predictor, transfer_function, 
+            variant, obs_dim, max_path_len, 
+            n_tasks, save_video_path, 
+            max_steps=20, beta = 0.1, experiment_name='test',
+            batch_size=20, policy_update_steps=512,):
     range_dict = OrderedDict(pos_x = [0.5, 25],
                              velocity_z = [1.5, 3.],
                              pos_y = [np.pi / 6., np.pi / 2.],
@@ -536,42 +541,21 @@ def rollout(env, encoder, decoder, high_level_controller, step_predictor, transf
 
     return l_vars, labels
 
-    # TODO: plot latent space
         
 
+def load_config(config_path):
+    with open(config_path, 'r') as file:
+        return json.load(file)
+
 if __name__ == "__main__":
-    # TODO: Do with json load for future
-    from experiments_configs.half_cheetah_multi_env import config as env_config
+    from configs.transfer_config import transfer_config as config
 
-    '''
-    Define inference module to be reused
-    '''
-    inference_path = '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm'
+    inference_path = config['inference_path']
+    complex_agent = config['complex_agent']
 
-    '''
-    Define the low-level controller and agent to reuse the inference mechanism
-    '''
-    complex_agent = dict(
-        environment = HalfCheetahMixtureEnv,
-        experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-        experiment_name = 'new_cheetah_training/half_cheetah_initial_random',
-        epoch = 700,
-    )
-    # complex_agent = dict(
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'walker_full_06_07',
-    #     epoch = 2100,
-    #     environment = WalkerMulti,
-    # )
-    # complex_agent = dict(
-    #     environment = HopperMulti,
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'hopper_full_sac0.2_reward1_randomchange',
-    #     epoch = 1400,
-    # )
-    
-
-    with open(complex_agent['experiments_repo'] + complex_agent['experiment_name'] + '/config.json', 'r') as file:
+    # Load environment configuration
+    env_config_path = os.path.join(complex_agent['experiments_repo'], complex_agent['experiment_name'], 'config.json')
+    with open(env_config_path, 'r') as file:
         env_config = json.load(file)
 
     env = complex_agent['environment'](env_config)
@@ -647,6 +631,9 @@ if __name__ == "__main__":
                 # pretrained=dict(path='/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_10_26_00_default_true_gmm/retrain_walker', file_name='low_level')
                 )
 
-    rollout(env, encoder, decoder, high_level_controller, step_predictor,
-                                        low_level_controller, variant, obs_dim, action_dim, 
-                                        max_path_len, n_tasks=1, inner_loop_steps=10, save_video_path=inference_path)
+    rollout(env, encoder, high_level_controller, step_predictor,
+            low_level_controller, variant, obs_dim,
+            max_path_len=config["max_path_len"], n_tasks=1, save_video_path=inference_path,
+            experiment_name=config['experiment_name'],
+            batch_size=config['batch_size'], policy_update_steps=config['policy_update_steps'],
+            )

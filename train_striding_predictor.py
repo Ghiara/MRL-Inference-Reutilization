@@ -35,7 +35,7 @@ from agent import SAC
 from model import ValueNetwork, QvalueNetwork, PolicyNetwork
 
 from mrl_analysis.plots.plot_settings import *
-from vis_utils.logging import log_all, _frames_to_gif
+from vis_utils.vis_logging import log_all, _frames_to_gif
 
 # DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 DEVICE = 'cuda'
@@ -531,167 +531,124 @@ def rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor, tran
         
 
 if __name__ == "__main__":
-    # from experiments_configs.half_cheetah_multi_env import config as env_config
+    from configs.transfer_config import transfer_config as config
 
-    '''
-    List of inference paths to test. The inference paths contain the inference models trained on the toy with different randomization values
-    '''
-    inference_paths = [
-        # {'name': 'var_0.1keep', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_16_15_34_37_default_true_gmm'},
-        # {'name': 'var_0.1keepno', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_16_12_22_59_default_true_gmm'},
-        # {'name': 'var_0.02', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_21_11_06_00_default_true_gmm'},
-        # {'name': 'var_0.05', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_23_12_40_04_default_true_gmm'},
-        {'name': 'var_0.1', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_16_15_34_37_default_true_gmm'},
-        {'name': 'no_var', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_02_15_23_09_default_true_gmm'},
-        # {'name': 'no random step 10', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_11_11_49_42_default_true_gmm'},
-        {'name': 'var_0.2', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_12_09_17_42_default_true_gmm'},
-        # {'name': 'var_0.01', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_12_20_31_24_default_true_gmm'},
-        # {'name': 'var_0.1, step 10', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_14_20_55_42_default_true_gmm'},
-        # {'name': 'var_0.1.2, step 10', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_16_12_23_15_default_true_gmm'},
-        # {'name': 'var_0.1.3, step 10', 'path': '/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_09_16_15_34_37_default_true_gmm'},
-        # {'name': 'inference_path_3', 'path': '/path/to/inference_path_3'},
-    ]
-
-    '''
-    Define the low-level policy and agent to test
-    '''
-    complex_agent_config = dict(
-        environment = HalfCheetahMixtureEnv,
-        experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-        experiment_name = 'new_cheetah_training/half_cheetah_initial_random',
-        epoch = 700,
-    )
-    # complex_agent_config = dict(
-    #     environment = HopperMulti,
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'hopper_full_sac0.2_reward1_randomchange',
-    #     epoch = 1400,
-    # )
-    # complex_agent_config = dict(
-    #     environment = HopperMulti,
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'hopper_12_07',
-    #     epoch = 2500,
-    # )
-    # complex_agent_config = dict(
-    #     experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-    #     experiment_name = 'walker_full_06_07',
-    #     epoch = 2100,
-    # )
+    inference_path = config['inference_path']
+    complex_agent = config['complex_agent']
 
     # Initialize rewards data
     rewards_data = {}
 
     # Loop over inference paths
-    for inference in inference_paths:
-        current_inference_path_name = inference['name']
-        inference_path = inference['path']
-        rewards_data[current_inference_path_name] = {'velocity': [], 'position': []}
+    # for inference_path in inference_paths:
+    current_inference_path_name = inference_path['name']
+    inference_path = inference_path['path']
+    rewards_data[current_inference_path_name] = {'velocity': [], 'position': []}
 
-        with open(complex_agent_config['experiments_repo'] + complex_agent_config['experiment_name'] + '/config.json', 'r') as file:
-            env_config = json.load(file)
+    with open(complex_agent['experiments_repo'] + complex_agent['experiment_name'] + '/config.json', 'r') as file:
+        env_config = json.load(file)
 
-        if env_config['env'] == 'hopper':
-            env = HopperGoal()
-        elif env_config['env'] == 'walker':
-            env = WalkerGoal()
-        elif env_config['env'] == 'half_cheetah_multi':
-            env = HalfCheetahMixtureEnv(env_config)
-        elif env_config['env'] == 'hopper_multi':
-            env = HopperMulti(env_config)
-        elif env_config['env'] == 'walker_multi':
-            env = WalkerMulti(env_config)
-        elif env_config['env'] == 'ant_multi':
-            env = AntMulti()
-        env.render_mode = 'rgb_array'
+    if env_config['env'] == 'hopper':
+        env = HopperGoal()
+    elif env_config['env'] == 'walker':
+        env = WalkerGoal()
+    elif env_config['env'] == 'half_cheetah_multi':
+        env = HalfCheetahMixtureEnv(env_config)
+    elif env_config['env'] == 'hopper_multi':
+        env = HopperMulti(env_config)
+    elif env_config['env'] == 'walker_multi':
+        env = WalkerMulti(env_config)
+    elif env_config['env'] == 'ant_multi':
+        env = AntMulti()
+    env.render_mode = 'rgb_array'
 
-        with open(f'{inference_path}/variant.json', 'r') as file:
-            variant = json.load(file)
+    with open(f'{inference_path}/variant.json', 'r') as file:
+        variant = json.load(file)
 
-        m = variant['algo_params']['sac_layer_size']
-        simple_env = ENVS[variant['env_name']](**variant['env_params'])         # Just used for initilization purposes
+    m = variant['algo_params']['sac_layer_size']
+    simple_env = ENVS[variant['env_name']](**variant['env_params'])         # Just used for initilization purposes
 
-        ### PARAMETERS ###
-        obs_dim = int(np.prod(simple_env.observation_space.shape))
-        action_dim = int(np.prod(simple_env.action_space.shape))
-        net_complex_enc_dec = variant['reconstruction_params']['net_complex_enc_dec']
-        latent_dim = variant['algo_params']['latent_size']
-        time_steps = variant['algo_params']['time_steps']
-        num_classes = variant['reconstruction_params']['num_classes']
-        # max_path_len = variant['algo_params']['max_path_length']
-        reward_dim = 1
-        encoder_input_dim = time_steps * (obs_dim + reward_dim + obs_dim)
-        shared_dim = int(encoder_input_dim / time_steps * net_complex_enc_dec)
-        if variant['algo_params']['sac_context_type']  == 'sample':
-            policy_latent_dim = latent_dim
-        else:
-            policy_latent_dim  = latent_dim * 2
+    ### PARAMETERS ###
+    obs_dim = int(np.prod(simple_env.observation_space.shape))
+    action_dim = int(np.prod(simple_env.action_space.shape))
+    net_complex_enc_dec = variant['reconstruction_params']['net_complex_enc_dec']
+    latent_dim = variant['algo_params']['latent_size']
+    time_steps = variant['algo_params']['time_steps']
+    num_classes = variant['reconstruction_params']['num_classes']
+    # max_path_len = variant['algo_params']['max_path_length']
+    reward_dim = 1
+    encoder_input_dim = time_steps * (obs_dim + reward_dim + obs_dim)
+    shared_dim = int(encoder_input_dim / time_steps * net_complex_enc_dec)
+    if variant['algo_params']['sac_context_type']  == 'sample':
+        policy_latent_dim = latent_dim
+    else:
+        policy_latent_dim  = latent_dim * 2
 
-        
-        bnp_model = BNPModel(
-            save_dir=variant['dpmm_params']['save_dir'],
-            start_epoch=variant['dpmm_params']['start_epoch'],
-            gamma0=variant['dpmm_params']['gamma0'],
-            num_lap=variant['dpmm_params']['num_lap'],
-            fit_interval=variant['dpmm_params']['fit_interval'],
-            kl_method=variant['dpmm_params']['kl_method'],
-            birth_kwargs=variant['dpmm_params']['birth_kwargs'],
-            merge_kwargs=variant['dpmm_params']['merge_kwargs']
-        )
+    
+    bnp_model = BNPModel(
+        save_dir=variant['dpmm_params']['save_dir'],
+        start_epoch=variant['dpmm_params']['start_epoch'],
+        gamma0=variant['dpmm_params']['gamma0'],
+        num_lap=variant['dpmm_params']['num_lap'],
+        fit_interval=variant['dpmm_params']['fit_interval'],
+        kl_method=variant['dpmm_params']['kl_method'],
+        birth_kwargs=variant['dpmm_params']['birth_kwargs'],
+        merge_kwargs=variant['dpmm_params']['merge_kwargs']
+    )
 
-        step_predictor = SAC(n_states=env.observation_space.shape[0],
-                n_actions=1,
-                task_dim = env.task.shape[0],   # desired state
-                hidden_layers_actor = [64,64,64,64,64],
-                hidden_layers_critic = [64,64,64,64,64],
-                memory_size=1e+6,
-                batch_size=512,
-                gamma=0.9,
-                alpha=0.2,
-                lr=3e-4,
-                action_bounds=[-50,50],
-                reward_scale=1, 
-                device=DEVICE
-                # pretrained=dict(path='/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_08_25_12_38_14_default_true_gmm/cheetah_26_08', epoch='low_level')
-                )
+    step_predictor = SAC(n_states=env.observation_space.shape[0],
+            n_actions=1,
+            task_dim = env.task.shape[0],   # desired state
+            hidden_layers_actor = [64,64,64,64,64],
+            hidden_layers_critic = [64,64,64,64,64],
+            memory_size=1e+6,
+            batch_size=512,
+            gamma=0.9,
+            alpha=0.2,
+            lr=3e-4,
+            action_bounds=[-50,50],
+            reward_scale=1, 
+            device=DEVICE
+            # pretrained=dict(path='/home/ubuntu/juan/melts/output/toy1d-multi-task/2024_08_25_12_38_14_default_true_gmm/cheetah_26_08', epoch='low_level')
+            )
 
-        memory = Memory(1e+6)
-        encoder = get_encoder(inference_path, shared_dim, encoder_input_dim)
-        simple_agent = get_simple_agent(inference_path, obs_dim, policy_latent_dim, action_dim, m)
-        transfer_function = get_complex_agent(env, complex_agent_config)
-        output_action_dim = env.task.shape[0]
-        decoder = get_decoder(inference_path, action_dim, obs_dim, reward_dim, latent_dim, output_action_dim, net_complex_enc_dec, variant)
-        optimizer = optim.Adam(decoder.parameters(), lr=3e-4)
+    memory = Memory(1e+6)
+    encoder = get_encoder(inference_path, shared_dim, encoder_input_dim)
+    simple_agent = get_simple_agent(inference_path, obs_dim, policy_latent_dim, action_dim, m)
+    transfer_function = get_complex_agent(env, complex_agent_config)
+    output_action_dim = env.task.shape[0]
+    decoder = get_decoder(inference_path, action_dim, obs_dim, reward_dim, latent_dim, output_action_dim, net_complex_enc_dec, variant)
+    optimizer = optim.Adam(decoder.parameters(), lr=3e-4)
 
-        ### ROLLOUT ###
-        rollout(env, encoder, decoder, optimizer, simple_agent,  step_predictor,
-                                        transfer_function, memory, variant, obs_dim, action_dim, 
-                                        max_path_len, n_tasks=1, inner_loop_steps=10, save_video_path=inference_path, experiment_name=complex_agent_config['experiment_name'],
-                                        current_inference_path_name=current_inference_path_name)
-       
-        '''
-        After the striding predictor is trained, plot the results with symmetric goals
-        '''
-        tasks = [
-            {'base_task':'goal_back', 'specification':0.9},
-            {'base_task':'goal_back', 'specification':0.5},
-            {'base_task':'goal_back', 'specification':0.3},
-            {'base_task':'goal_front', 'specification':0.3},
-            {'base_task':'goal_front', 'specification':0.5},
-            {'base_task':'goal_front', 'specification':0.9},
-            {'base_task':'backward_vel', 'specification':0.9},
-            {'base_task':'backward_vel', 'specification':0.5},
-            {'base_task':'backward_vel', 'specification':0.1},
-            # {'base_task':'backward_vel', 'specification':1.0},
-            # {'base_task':'forward_vel', 'specification':1.0},
-            {'base_task':'forward_vel', 'specification':0.1},
-            {'base_task':'forward_vel', 'specification':0.5},
-            {'base_task':'forward_vel', 'specification':0.9},
-                 ]
-        rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor,
-                                        transfer_function, memory, variant, obs_dim, action_dim, 
-                                        max_path_len, n_tasks=1, inner_loop_steps=10, save_video_path=inference_path, experiment_name=complex_agent_config['experiment_name'],
-                                        current_inference_path_name=current_inference_path_name, tasks=tasks)
+    ### ROLLOUT ###
+    rollout(env, encoder, decoder, optimizer, simple_agent,  step_predictor,
+                                    transfer_function, memory, variant, obs_dim, action_dim, 
+                                    max_path_len, n_tasks=1, inner_loop_steps=10, save_video_path=inference_path, experiment_name=complex_agent_config['experiment_name'],
+                                    current_inference_path_name=current_inference_path_name)
+    
+    '''
+    After the striding predictor is trained, plot the results with symmetric goals
+    '''
+    tasks = [
+        {'base_task':'goal_back', 'specification':0.9},
+        {'base_task':'goal_back', 'specification':0.5},
+        {'base_task':'goal_back', 'specification':0.3},
+        {'base_task':'goal_front', 'specification':0.3},
+        {'base_task':'goal_front', 'specification':0.5},
+        {'base_task':'goal_front', 'specification':0.9},
+        {'base_task':'backward_vel', 'specification':0.9},
+        {'base_task':'backward_vel', 'specification':0.5},
+        {'base_task':'backward_vel', 'specification':0.1},
+        # {'base_task':'backward_vel', 'specification':1.0},
+        # {'base_task':'forward_vel', 'specification':1.0},
+        {'base_task':'forward_vel', 'specification':0.1},
+        {'base_task':'forward_vel', 'specification':0.5},
+        {'base_task':'forward_vel', 'specification':0.9},
+                ]
+    rollout(env, encoder, decoder, optimizer, simple_agent, step_predictor,
+                                    transfer_function, memory, variant, obs_dim, action_dim, 
+                                    max_path_len, n_tasks=1, inner_loop_steps=10, save_video_path=inference_path, experiment_name=complex_agent_config['experiment_name'],
+                                    current_inference_path_name=current_inference_path_name, tasks=tasks)
 
 
     '''
@@ -706,8 +663,8 @@ if __name__ == "__main__":
     positions = []
     pos = 1  # Starting position for the first box
 
-    for i, inference in enumerate(inference_paths):
-        inference_name = inference['name']
+    for i, inference_path in enumerate(inference_paths):
+        inference_name = inference_path['name']
         # Get rewards for position and velocity tasks
         position_rewards = rewards_data[inference_name]['position']
         velocity_rewards = rewards_data[inference_name]['velocity']
