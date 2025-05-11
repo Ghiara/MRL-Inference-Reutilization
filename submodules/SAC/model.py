@@ -170,7 +170,7 @@ class PolicyNetwork(nn.Module):
             self.log_std.bias.data.zero_()
 
         self.action_selector = nn.Sequential(
-            nn.Linear(list(self.children())[-3].out_features + task_dim, 300),
+            nn.Linear(list(self.children())[-4].out_features + task_dim, 300),
             nn.ReLU(),  # Non-linearity
             nn.Linear(300, 300),
             nn.ReLU(),  # Non-linearity

@@ -30,7 +30,7 @@ from datetime import datetime
 import pytz
 
 from mrl_analysis.utility.data_smoothing import smooth_plot, smooth_fill_between
-from vis_utils.logging import log_all, _frames_to_gif
+from vis_utils.vis_logging import log_all, _frames_to_gif
 
 saved_dict = False
 record_video_every = 50

@@ -33,7 +33,7 @@ from model import ValueNetwork, QvalueNetwork, PolicyNetwork
 from mrl_analysis.utility.data_smoothing import smooth_plot, smooth_fill_between
 from mrl_analysis.plots.plot_settings import *
 
-from vis_utils.logging import log_all, _frames_to_gif
+from vis_utils.vis_logging import log_all, _frames_to_gif
 
 # DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 DEVICE = 'cuda'
@@ -634,6 +634,6 @@ if __name__ == "__main__":
     rollout(env, encoder, high_level_controller, step_predictor,
             low_level_controller, variant, obs_dim,
             max_path_len=config["max_path_len"], n_tasks=1, save_video_path=inference_path,
-            experiment_name=config['experiment_name'], sim_time_steps=config['sim_time_steps'],
+            experiment_name=config['experiment_name'],
             batch_size=config['batch_size'], policy_update_steps=config['policy_update_steps'],
             )

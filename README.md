@@ -131,28 +131,29 @@ Update the config under configs/toy_config.py if necessary. Start the training w
 ```bash
 python run_toy_training.py
 ```
-This will save the results in the folder output.
+This will save the results in the folder output/toy1d-multi-task.
 
 ### 2. Train low-level policy for new agent
 Parallely train the low-level-controller. Important file is train_low_level_policy.py. In that file, import the config from submodules/SAC/env_configs. This defines which experiment to start. Then run the file with 
 ```bash
-python train_reutilization/train_low_level_policy.py
+python train_low_level_policy.py
 ```
 The results will be saved in the folder output/low_level_policy.
 
 ### 3. To transfer the knowledge there are two possibilities
 #### 3.1 Reuse the policy from the toy as the high-level policy
+Update the config under configs/transfer_config.py with the results obtained from training the toy and the lower level policy.
 If more than one task should be learned, the striding predictor should be learned. First update the inference path with the path from the toy training and the complex_agent_config with the output from the low-level policy training. (Idea: learn the striding predictor with the low-level controller)
 
 ```bash
-python train_reutilization/train_striding_predictor.py
+python train_striding_predictor.py
 ```
 
 #### 3.2 Relearn the high-level policy
 The other option is to learn the high-level policy from scratch. Also here, the inference path and the complex_agent_config have to be updated. Then run the training.
 
 ```bash
-python train_reutilization/train_high_level_policy.py
+python train_high_level_policy.py
 ```
 
 ### 4. Visualize results
