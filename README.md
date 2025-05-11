@@ -138,7 +138,12 @@ Parallely train the low-level-controller. Important file is train_low_level_poli
 ```bash
 python train_low_level_policy.py
 ```
-The results will be saved in the folder output/low_level_policy.
+The results will be saved in the folder output/low_level_policy. This script will load a config under the folder experiments_configs. The default is the cheetah config. If you want to choose a different one use the flag --env.
+```bash
+python train_low_level_policy.py --env hopper
+python train_low_level_policy.py --env walker2d
+```
+The environments loaded can be used to train parametric and non-parametric tasks. This has to be adjusted in the respective configs.
 
 ### 3. To transfer the knowledge there are two possibilities
 #### 3.1 Reuse the policy from the toy as the high-level policy
