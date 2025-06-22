@@ -92,6 +92,9 @@ def model_evaluation(
     specification_keyword: str = 'goal',  # How tasks are named
     create_video: bool = True,
     show_plots: bool = False,
+    encoder_path: str = None,
+    agent_path: str = None,
+    epoch: int = 1,
 ):
     """Creates evaluation figures from a directory of training data.
 
@@ -269,7 +272,7 @@ def model_evaluation(
 
     # Rollout trajectories    
     simple_env = Toy1D(25,25, min_pos=.0, max_pos=10.0, max_action=0.5)
-    encoder, env, transfer_function = load_model(encoder, config)
+    encoder, env, transfer_function = load_model(encoder, encoder_path, agent_path, epoch)
     decoder = None
     value_function = None
     tg = TrajectoryGeneratorWithTransferFunction(simple_env, env, policy, encoder, transfer_function, decoder, value_function)
@@ -398,16 +401,16 @@ def model_evaluation(
     print("\n\n")
 
 
-def load_model(encoder, path, epoch):
+def load_model(encoder, encoder_path, agent_path, epoch):
 
     '''
     Define the low-level policy and agent to test
     '''
     complex_agent_config = dict(
-        path = '/home/ubuntu/juan/MRL-Inference-Reutilization/output/low_level_policy/',
+        path = agent_path,
         epoch = epoch,
     )
-    with open(os.path.join(path, 'config.json'), "r") as file:
+    with open(os.path.join(agent_path, 'config.json'), "r") as file:
         env_config = json.load(file)
 
     complex_agent_config['environment'] = WalkerMulti(env_config)
@@ -431,10 +434,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--encoder_path', type=str, default=None, help='Path to encoder checkpoint')
     parser.add_argument('--agent_path', type=str, default=None, help='Path to low level agent checkpoint')
+    parser.add_argument('--epoch', type=int, default=None, help='Epoch of the low level agent to use')
     args = parser.parse_args()
 
     encoder_path = args.encoder_path if args.encoder_path is not None else default_encoder_path
     agent_path = args.agent_path if args.agent_path is not None else default_agent_path
+    epoch = args.epoch if args.epoch is not None else 100
 
 
     with open(os.path.join(agent_path, 'variant.json'), "r") as file:
@@ -448,4 +453,7 @@ if __name__ == "__main__":
         figure_size=(8,6),
         trajectory_2d=False,
         color_by=None,
+        encoder_path=encoder_path, 
+        agent_path=agent_path,
+        epoch=epoch,
     )
