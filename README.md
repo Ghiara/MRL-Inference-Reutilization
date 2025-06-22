@@ -170,7 +170,10 @@ Some utility scripts are stored under the vis_utils folder. The training of the 
 - **test_tasks**: Loads models from retraining high_policy and plots trajetories.
 
 ### Alternative: Run only parametric task variations with encoder consisting of GRUs
-In case a simple encoder is to be used, the implementation by Durmann can be used. To do so train the toy agent with the script run_experiment.py in the subfolder Meta_RL. Then the inference reutilization can be tested with the script new_model_eval.py. There you have to choose the low-level policy and the inference mechanism trained on the toy.
+In case a simple encoder is to be used, the implementation by Durmann can be used. To do so train the toy agent with the script run_experiment.py. Then the inference reutilization can be tested with the script new_model_eval.py. There you have to choose the low-level policy and the inference mechanism trained on the toy. You can do this by using following command with the updated paths:
+```bash
+python submodules/Meta_RL/smrl/transfer_function/new_model_eval.py --encoder_path <path_to_encoder_path> --agent_path <path_to_low_level_agent> --epoch <checkpoint_of_low_level_policy_to_use>
+```
 
 ## Troubleshooting
 
