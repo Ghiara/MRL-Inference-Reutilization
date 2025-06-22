@@ -25,7 +25,7 @@ from matplotlib.figure import Figure
 import gym
 import numpy as np
 import pandas as pd
-import torch
+import argparse
 
 from smrl.experiment.analysis import load_results
 from smrl.utility.console_strings import bold, italic
@@ -63,7 +63,7 @@ DEVICE = 'cpu'
 max_path_l = 200
 
 def get_complex_agent(env, complex_agent_config):
-    pretrained = complex_agent_config['experiments_repo']+complex_agent_config['experiment_name']+f"/models/policy_model/epoch_{complex_agent_config['epoch']}.pth"
+    pretrained = os.path.join(complex_agent_config['path'],"/models/policy_model/epoch_",str(complex_agent_config['epoch']),".pth")
     n_states = env.observation_space.shape[0]
     n_actions = env.action_space.shape[0]
     action_bounds = [env.action_space.low[0], env.action_space.high[0]]
@@ -398,17 +398,16 @@ def model_evaluation(
     print("\n\n")
 
 
-def load_model(encoder, config):
+def load_model(encoder, path, epoch):
 
     '''
     Define the low-level policy and agent to test
     '''
     complex_agent_config = dict(
-        experiments_repo = '/home/ubuntu/juan/Meta-RL/experiments_transfer_function/',
-        experiment_name = 'walker_pos_24_06',
-        epoch = 700,
+        path = '/home/ubuntu/juan/MRL-Inference-Reutilization/output/low_level_policy/',
+        epoch = epoch,
     )
-    with open(os.path.join(complex_agent_config['experiments_repo'],complex_agent_config['experiment_name'], 'config.json'), "r") as file:
+    with open(os.path.join(path, 'config.json'), "r") as file:
         env_config = json.load(file)
 
     complex_agent_config['environment'] = WalkerMulti(env_config)
@@ -425,212 +424,28 @@ if __name__ == "__main__":
     '''
     Deinfe the inference module
     '''
-    paths = [
-        # "data/experiments/toy2d_on-off-policy/toy2d_rand_off-policy_log-random-inference_2023-02-26_19-58-01",
-        # "data/experiments/toy2d_on-off-policy/toy2d_rand_off-policy_memory-random-inference_2023-02-26_19-57-52",
-        # "data/experiments/toy2d_on-off-policy/toy2d_rand_off-policy_multi-random-inference_2023-02-26_19-57-57",
-        # "data/experiments/toy2d_on-off-policy/toy2d_rand_off-policy_random-inference_2023-02-26_19-57-44",
-        # "data/experiments/toy2d_on-off-policy/toy2d_rand_on-policy_2023-02-26_19-56-47",
-        # "data/experiments/toy2d_on-off-policy/toy2d_off-policy_log-random-inference_2023-02-26_19-58-14",
-        # "data/experiments/toy2d_on-off-policy/toy2d_rand_on-policy-entropy-tuning_2023-02-26_20-05-57",
 
-        # "data/experiments/toy1d_buffers/toy1d_rand_context-buffer_2023-03-05_10-55-36",
-        # "data/experiments/toy1d_buffers/toy1d_rand_multitask-buffer-ordered_2023-03-05_10-57-52",
-        # "data/experiments/toy1d_buffers/toy1d_rand_multitask-buffer-randomized_2023-03-05_10-58-27",
-        # "data/experiments/toy1d_buffers/toy1d_rand_trajectory-buffer-ordered_2023-03-05_10-56-19",
-        # "data/experiments/toy1d_buffers/toy1d_rand_trajectory-buffer-randomized_2023-03-05_10-57-00",
+    default_encoder_path = "/home/ubuntu/juan/MRL-Inference-Reutilization/data/experiments_thesis/step1_biggerNN_-10_10/_2025-06-22_21-02-48"
+    default_agent_path = '/home/ubuntu/juan/MRL-Inference-Reutilization/output/low_level_policy/new_cheetah_training/half_cheetah_initial_random'
 
-        # "data/experiments/toy1d_on-off-policy/toy1d_rand_off-policy_log-random-inference_2023-03-15_20-20-29",
-        # "data/experiments/toy1d_on-off-policy/toy1d_rand_off-policy_memory-random-inference_2023-03-17_20-26-11",
-        # "data/experiments/toy1d_on-off-policy/toy1d_rand_off-policy_memory-random-inference_2023-03-19_09-52-33",
-        # "data/experiments/toy1d_on-off-policy/toy1d_rand_off-policy_multi-random-inference_2023-03-16_14-11-19",
-        # "data/experiments/toy1d_on-off-policy/toy1d_rand_off-policy_random-inference_2023-03-16_14-38-41",
-        # "data/experiments/toy1d_on-off-policy/toy1d_rand_on-policy_2023-03-15_20-21-08",
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--encoder_path', type=str, default=None, help='Path to encoder checkpoint')
+    parser.add_argument('--agent_path', type=str, default=None, help='Path to low level agent checkpoint')
+    args = parser.parse_args()
 
-        # "data/experiments/toy1d_TE/toy1d_TE-toy1d_2023-03-20_11-01-57",
-        # "data/experiments/toy1d_TE/toy1d_rand_huge_TE-toy1d-log_2023-03-20_11-58-10",
-        # "data/experiments/toy1d_TE/toy1d_rand_huge_TE-toy1d-log_2023-03-20_14-19-00",
-        # "data/experiments/toy1d_TE/toy1d_rand_huge_TE-toy1d-log_2023-03-20_14-19-36",
-        # "data/experiments/toy1d_TE/toy1d_rand_huge_TE-toy1d_2023-03-20_11-18-38",
-        # "data/experiments/toy1d_TE/toy1d_rand_large_TE-toy1d_2023-03-20_11-02-57",
-        # "data/experiments/toy1d_TE/toy1d_rand_larger_TE-toy1d_2023-03-20_11-32-57",
-        # "data/experiments/toy1d_TE/toy1d_rand_small_TE-toy1d_2023-03-20_11-48-32",
-        # "data/experiments/toy1d_TE/toy1d_rand_smaller_TE-toy1d_2023-03-20_11-17-34",
-        # "data/experiments/toy1d_TE/toy1d_rand_huge_TE-toy1d-log-strided_2023-03-22_14-53-57",
-        # "data/experiments/toy1d_TE/toy1d_rand_huge_TE-toy1d-strided_2023-03-22_13-59-59",
-
-        # "data/experiments/toy1d_TE_mean-var/toy1d_TE-toy1d_2023-03-23_09-29-27",
-        # "data/experiments/toy1d_TE_mean-var/toy1d_rand_huge_TE-toy1d-log-strided_2023-03-23_16-18-44",
-        # "data/experiments/toy1d_TE_mean-var/toy1d_rand_huge_TE-toy1d-log_2023-03-23_14-27-13",
-        # "data/experiments/toy1d_TE_mean-var/toy1d_rand_huge_TE-toy1d-strided_2023-03-23_15-23-37",
-        # "data/experiments/toy1d_TE_mean-var/toy1d_rand_huge_TE-toy1d_2023-03-23_13-34-40",
-        # "data/experiments/toy1d_TE_mean-var/toy1d_rand_large_TE-toy1d_2023-03-23_12-42-19",
-        # "data/experiments/toy1d_TE_mean-var/toy1d_rand_larger_TE-toy1d_2023-03-23_10-59-49",
-        # "data/experiments/toy1d_TE_mean-var/toy1d_rand_small_TE-toy1d_2023-03-23_11-50-06",
-        # "data/experiments/toy1d_TE_mean-var/toy1d_rand_smaller_TE-toy1d_2023-03-23_10-14-10",
-        # "data/experiments/toy1d_TE_mean-var/toy1d_rand_huge_TE-toy1d-attention-np_2023-03-25_12-01-49",
-        # "data/experiments/toy1d_TE_mean-var/toy1d_rand_huge_TE-toy1d-attention-np_2023-03-25_12-14-29",
-        # "data/transfer_encoders/toy1d_attention-np",
-
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-on-policy_2023-03-20_10-37-15",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-on-policy-strided_2023-03-20_10-40-35",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-rand_2023-03-20_11-54-42",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-rand-strided_2023-03-20_12-03-02",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-memory_2023-03-20_13-19-32",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-memory-strided_2023-03-20_13-32-10",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-multi_2023-03-20_14-49-44",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-multi-strided_2023-03-20_15-09-16",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-log_2023-03-20_16-25-06",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-log-strided_2023-03-20_16-47-25",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-attention_2023-03-29_11-18-16",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-attention_2023-03-29_11-26-35",
-        # "data/experiments/toy1d_TE_disc-to-cont/toy1d_cont_rand_TE-toy1d-attention-strided_2023-03-29_13-07-04",
-
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-log_2023-03-27_09-58-46",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-log_2023-03-27_19-05-54",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-log-strided_2023-03-27_10-00-41",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-log-strided_2023-03-27_19-06-18",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-memory_2023-03-27_14-16-18",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-memory_2023-03-28_04-41-21",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-memory-strided_2023-03-27_14-35-08",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-memory-strided_2023-03-28_04-41-57",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-multi_2023-03-27_15-41-54",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-multi_2023-03-28_07-21-03",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-multi-strided_2023-03-27_16-05-48",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-multi-strided_2023-03-28_07-19-50",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-on-policy_2023-03-27_11-23-44",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-on-policy_2023-03-27_22-39-00",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-on-policy-strided_2023-03-27_11-31-44",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-on-policy-strided_2023-03-27_22-41-54",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-rand_2023-03-27_12-51-36",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-rand_2023-03-28_01-43-27",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-rand-strided_2023-03-27_13-05-16",
-        # "data/experiments/toy1d_TE_disc-to-cont_2/toy1d_cont_rand_TE-toy1d-rand-strided_2023-03-28_01-47-47",
-
-        # "data/experiments/toy1d_encoders/toy1d_rand_attention-encoder-np_2023-03-24_09-38-33",
-        # "data/experiments/toy1d_encoders/toy1d_rand_attention-encoder-vae_2023-03-24_09-38-00",
-        # "data/experiments/toy1d_encoders/toy1d_rand_gru-encoder-np_2023-03-22_05-25-36",
-        # "data/experiments/toy1d_encoders/toy1d_rand_gru-encoder-vae_2023-03-20_11-51-19",
-        # "data/experiments/toy1d_encoders/toy1d_rand_mlp-encoder-vae_2023-03-21_09-52-45",
-        # "data/experiments/toy1d_encoders/toy1d_rand_pair-encoder-np_2023-03-20_11-49-14",
-        # "data/experiments/toy1d_encoders/toy1d_rand_pair-encoder-vae_2023-03-21_16-57-06",
-
-        # "data/experiments/toy1d-cont_on-off-policy_3/toy1d_cont_rand_on-policy_2023-03-28_11-49-49",
-        # "data/experiments/toy1d-cont_on-off-policy_3/toy1d_cont_rand_off-policy_random-inference_2023-03-29_09-44-05",
-        # "data/experiments/toy1d-cont_on-off-policy_3/toy1d_cont_rand_off-policy_memory-random-inference_2023-03-28_11-50-37",
-        # "data/experiments/toy1d-cont_on-off-policy_3/toy1d_cont_rand_off-policy_multi-random-inference_2023-03-28_10-17-55",
-        # "data/experiments/toy1d-cont_on-off-policy_3/toy1d_cont_rand_off-policy_log-random-inference_2023-03-28_10-20-35",
-
-        # "data/experiments/toy1d-cont_buffers/toy1d_cont_rand_trajectory-buffer-ordered_2023-04-23_10-53-39",
-        # "data/experiments/toy1d-cont_buffers/toy1d_cont_rand_trajectory-buffer-randomized_2023-04-23_12-27-36",
-        # "data/experiments/toy1d-cont_buffers/toy1d_cont_rand_multitask-buffer-randomized_2023-04-23_12-29-24",
-
-        # "/home/ubuntu/juan/Meta-RL/data/toy1d_rand_Base-config_2023-11-14_10-41-02", 
-        # "/home/ubuntu/juan/Meta-RL/data/randomization_experiment_2023-11-14_18-22-52",
-        # "/home/ubuntu/juan/Meta-RL/data/toy1d_rand_Base-config_2023-11-14_12-27-45",
-        # "/home/ubuntu/juan/Meta-RL/data/randomization_experiment_mult:0.5-2"
-        # "/home/ubuntu/juan/Meta-RL/data/randomization_experiment_mult:0.3-5",
-        # "/home/ubuntu/juan/Meta-RL/data/randomization_experiment_mult:0.5-2"
-        # "/home/ubuntu/juan/Meta-RL/data/Huge_experiment_2023-11-14_17-29-32"
-        # "/home/ubuntu/juan/Meta-RL/data/Huge_experiment-random-0.5-2_2023-11-15_19-08-11"
-        # "/home/ubuntu/juan/Meta-RL/data/randomization_experiment_mult:0.8-1.5",
-        # "/home/ubuntu/juan/Meta-RL/data/randomization_experiment_mult:0.2-10"
-        # "/home/ubuntu/juan/Meta-RL/data/Huge_experiment_mult:0.3-5_2023-11-16_11-44-36"
-        # "/home/ubuntu/juan/Meta-RL/data/randomization_experiment_mult:0.9-1.1",
-        # "/home/ubuntu/juan/Meta-RL/data/randomization_experiment_mult:0.9-1.1(toy1d_rand)",
-        # "/home/ubuntu/juan/Meta-RL/data/Hardcoded 0.5-1.5_2023-11-18_11-17-48"
-        # "/home/ubuntu/juan/Meta-RL/data/Hardcoded 0.5-1.5_2023-11-16_12-58-32"
-        # "/home/ubuntu/juan/Meta-RL/data/fails/Hardcoded 0.5-1.5 symmetric_2023-11-16_13-00-08"
-        # "/home/ubuntu/juan/Meta-RL/data/Hardcoded 0.5-1.5 symmetric_2023-11-18_13-16-14"
-        # "/home/ubuntu/juan/Meta-RL/data/Hardcoded 0.5-1.5 symmetric_2023-11-18_13-16-14_2023-11-18_19-39-18_transfer"
-        # "/home/ubuntu/juan/Meta-RL/data/old/Baseline_2023-11-18_19-42-43"
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline with multiplier_2023-11-18_19-59-28",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_2023-11-18_19-42-43"
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline with multiplier_2023-11-18_19-59-28_transfer",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_2023-11-18_19-42-43_transfer"
-        # "/home/ubuntu/juan/Meta-RL/data/Multiplier with multi memory(exploration)_2023-11-19_11-47-48",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline multi memory(exploration)_2023-11-19_11-46-39"
-        # "/home/ubuntu/juan/Meta-RL/data/Multiplier with multi memory(exploration)_2023-11-19_
-        # "/home/ubuntu/juan/Meta-RL/data/cheetah_goal_TE-log_2023-11-28_21-48-27"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer_huge_small_steps/toy1d_rand_huge_TE-toy1d_2023-12-01_16-21-44"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer_huge_small_steps/test/toy1d_rand_huge_TE-toy1d_2023-12-01_16-30-31"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer_huge_small_steps/toy1d_rand_smaller_TE-toy1d_2023-12-01_16-36-10"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer_huge_small_steps/toy1d_TE-toy1d_2023-12-02_15-18-57"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/cheetah_goal_TE-log-strided_2023-12-01_16-06-37"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer_huge_small_steps/toy1d_TE-toy1d_2023-12-02_16-25-19"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/cheetah_goal_TE-log-strided_2023-12-07_12-56-31"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/cheetah_goal_TE-log-strided_2023-12-07_13-27-58"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/cheetah_goal_TE-log-strided_2023-12-07_13-57-02"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/averesto/cheetah_goal_TE-log-strided_2023-12-07_14-05-38"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/toy1d_TE-log_2023-12-07_19-01-10"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/cheetah_goal_TE-log-strided_2023-12-07_13-35-04"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/toy1d_TE-log_2023-12-07_19-09-31"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/toy1d_TE-log_2023-12-07_19-14-03"
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_50_small_steps_2023-12-07_19-07-13",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_50_2023-12-07_18-40-02"
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_50_big_steps_2023-12-08_09-26-47"
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_1_steps_0.01_2023-12-08_10-09-58"
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_1_steps_0.01_2023-12-08_10-09-58",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_50_2023-12-07_18-40-02",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_50_big_steps_2023-12-08_09-26-47",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_50_small_steps_2023-12-07_19-07-13"
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_unifrom_sampling_-10_10_2023-12-08_17-19-23",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_increased_S_3_2023-12-09_11-32-46",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_increased_S_5_2023-12-09_11-31-52",
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/cheetah_goal_TE-log-strided_2023-12-10_11-01-32"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/cheetah_goal_TE-log-strided_2023-12-10_11-24-59"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/cheetah_goal_TE-log_2023-12-10_11-50-37"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/cheetah_goal_TE-log-strided_2023-12-10_13-46-13"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/cheetah_goal_TE-log-strided_2023-12-10_13-53-38",
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/cheetah_goal_TE-log_2023-12-10_13-56-57"
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_50_2023-12-07_18-40-02"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/cheetah_goal_TE-log_2023-12-10_14-21-43"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/cheetah_goal_TE-log-strided_2023-12-10_14-26-20"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/toy1d_TE-log_2023-12-10_17-09-10"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/test/toy1d_TE-log_2023-12-10_17-15-20"
-        # "/home/ubuntu/juan/base/data/Baseline_exloration"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/no_pretrained/cheetah_goal_TE-log-strided(500-100)_2023-12-10_20-47-20",
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/pretrained/cheetah_goal_TE-log-strided(500-100)_2023-12-10_21-14-53",
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/pretrained/cheetah_goal_TE-log-strided(500-100)_std_5_2023-12-11_19-24-44",
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/full/np_pretrained/cheetah_goal_TE-log-strided(500-100)_std_5_2023-12-11_19-22-08"
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_50_2023-12-07_18-40-02",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_increased_S_3_2023-12-09_11-32-46",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_increased_S_5_2023-12-09_11-31-52",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_1_steps_0.01_2023-12-08_10-09-58"
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_increased_policy_expl_var_S_3_2023-12-13_11-29-31"
-        # "/home/ubuntu/juan/Meta-RL/data/delete/test_2023-12-18_15-31-19",
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/test/toy1d_TE-log_2023-12-18_16-32-08"
-        # "/home/ubuntu/juan/Meta-RL/data/delete/test_2023-12-18_16-51-42",
-        # "/home/ubuntu/juan/Meta-RL/data/delete/test_2023-12-18_17-50-31",
-        # "/home/ubuntu/juan/Meta-RL/data/presentation/baseline_2023-12-20_10-28-02",
-        # "/home/ubuntu/juan/Meta-RL/data/presentation/baseline_task50_action1_2023-12-20_10-29-20",
-        # "/home/ubuntu/juan/Meta-RL/data/Baseline_max_task_50_2023-12-07_18-40-02"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/test/toy1d_TE-log_2023-12-20_12-27-09"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/presentation/toy1d_TE-log_2023-12-20_16-28-57"
-        # "/home/ubuntu/juan/Meta-RL/data/transfer/cheetah/presentation/cheetah_goal_TE-log-strided(500-100)_uniform_2023-12-20_16-35-11"
-        # "/home/ubuntu/juan/data/pretrained_for_transfer/baseline_2024-01-20_15-33-32"
-        # '/home/ubuntu/juan/Meta-RL/data/pretrained_for_transfer/toy1d_TE-toy1d_2024-02-04_11-32-43'
-        # "/home/ubuntu/juan/data/pretrained_for_transfer/baseline_2024-01-20_15-33-32"
-        '/home/ubuntu/juan/Meta-RL/data/experiments_thesis/simple_exploration_biggerNN/_2024-04-24_11-13-30'
+    encoder_path = args.encoder_path if args.encoder_path is not None else default_encoder_path
+    agent_path = args.agent_path if args.agent_path is not None else default_agent_path
 
 
-
-        # "data/transfer_encoders/toy1d_attention-np",
-        # "data/transfer_encoders/toy1d_log-rand",
-
-    ]
-
-
-    for path in paths:
-        with open(os.path.join(path, 'variant.json'), "r") as file:
-            config = json.load(file)
-        model_evaluation(
-            path,
-            save_dir='./evaluation/experiments_thesis/transfer_full_walker_5_test/',
-            config=config,
-            # save_dir = './data/delete',
-            create_video=True,
-            figure_size=(8,6),
-            trajectory_2d=False,
-            color_by=None,
-        )
+    with open(os.path.join(agent_path, 'variant.json'), "r") as file:
+        config = json.load(file)
+    model_evaluation(
+        agent_path,
+        save_dir='./evaluation/experiments_thesis/transfer_full_walker_5_test/',
+        config=config,
+        # save_dir = './data/delete',
+        create_video=True,
+        figure_size=(8,6),
+        trajectory_2d=False,
+        color_by=None,
+    )

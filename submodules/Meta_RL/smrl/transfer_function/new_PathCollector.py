@@ -90,7 +90,7 @@ class TrajectoryGeneratorWithTransferFunction():
             action_dist = self.action_distribution(traj)
             traj['action_dist'] = action_dist
             traj['action_mean'] = ptu.np_ify(action_dist.mean)
-            traj['action_std'] = np.sqrt(ptu.np_ify(action_dist.variance))
+            # traj['action_std'] = np.sqrt(ptu.np_ify(action_dist.variance))
             latent_dist = self.latent_distribution(contexts)
             traj['latent_dist'] = latent_dist
             traj['latent_mean'] = ptu.np_ify(latent_dist.mean)

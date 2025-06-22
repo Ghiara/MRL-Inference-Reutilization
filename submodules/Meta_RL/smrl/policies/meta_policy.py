@@ -16,7 +16,7 @@ import numpy as np
 
 from rlkit.torch.core import torch_ify, elem_or_tuple_to_numpy
 
-from rlkit.torch.distributions import TanhNormal, Delta, TanhNormalWithMaxAction
+from rlkit.torch.distributions import TanhNormal
 from stable_baselines3 import SAC
 
 from .base import MetaRLPolicy
@@ -43,7 +43,7 @@ class MakeDeterministic(MetaRLPolicy):
 
     def forward(self, *args, **kwargs):
         dist = self.stochastic_policy.forward(*args, **kwargs)
-        return Delta(dist.mle_estimate())
+        return dist
 
 
 class MetaRLTanhGaussianPolicy(MetaRLPolicy):
@@ -139,7 +139,7 @@ class MetaRLTanhGaussianPolicyWithMaxAction(MetaRLPolicy):
         mean = self._mean_layer(h)
         log_std = self._std_layer(h)
         std = torch.exp(torch.clip(log_std, LOG_STD_MIN, LOG_STD_MAX))
-        return TanhNormalWithMaxAction(mean, std, self.max_action)
+        return TanhNormal(mean, std, self.max_action)
     
 
 class PretrainedCheetah(MetaRLPolicy):
@@ -207,77 +207,6 @@ class PretrainedCheetah(MetaRLPolicy):
         log_std = self.std_dev(h)
         std = torch.exp(torch.clip(log_std, LOG_STD_MIN, LOG_STD_MAX))
         return TanhNormal(a, std)
-    def get_action(self, obs:np.ndarray, encoding:torch.Tensor = None):
-        return elem_or_tuple_to_numpy(self._actions_from_distribution(self.forward(obs), mode='sample')), {}
-        
-
-        return 
-    def get_actions(self, obs:np.ndarray):
-        pass
-
-
-class PretrainedCheetahBackup(MetaRLPolicy):
-    """A simple Meta-RL policy which concatenates
-    observations with latent contexts and passes them through
-    a multi-layer perceptron (MLP).
-
-    Parameters
-    ----------
-    obs_dim : int
-        The observation dimension.
-    encoding_dim : int
-        The latent dimension of the context variables.
-    action_dim : int
-        The action dimension.
-    hidden_sizes : List[int]
-        The hidden layer sizes of the MLP.
-    activation_layers : Type[torch.nn.ReLU], optional
-        Activation layer class, by default torch.nn.ReLU
-    """
-    def __init__(
-            self,
-            obs_dim: int = 20,
-            encoding_dim: int = 2,
-            action_dim: int = 6,
-            hidden_sizes: List[int] = [256,256,256],
-            activation_layer: Type[torch.nn.ReLU] = torch.nn.ReLU,
-            **kwargs
-    ):
-        super().__init__(obs_dim, encoding_dim, action_dim, **kwargs)
-
-        self.pretrained_weights = torch.load("/home/ubuntu/juan/Meta-RL/submodules/ppo/HalfCheetah-v3_1/policy.pth")
-
-        input_dim = 17  # Input dimension
-        hidden_dim = 256  # Hidden dimension
-        output_dim = 6  
-        self.features_extractor = nn.Flatten()
-        self.pi_features_extractor = nn.Flatten()
-        self.vf_features_extractor = nn.Flatten()
-        self.layer1 = nn.Linear(input_dim, hidden_dim)
-        self.layer2 = nn.Linear(hidden_dim, hidden_dim)
-        self.layer1.weight.data = self.pretrained_weights['mlp_extractor.policy_net.0.weight']
-        self.layer2.weight.data = self.pretrained_weights['mlp_extractor.policy_net.2.weight']
-        self.layer1.bias.data = self.pretrained_weights['mlp_extractor.policy_net.0.bias']
-        self.layer2.bias.data = self.pretrained_weights['mlp_extractor.policy_net.2.bias']
-
-        self.network = nn.Sequential(
-            self.layer1,
-            nn.ReLU(),
-            self.layer2,
-            nn.ReLU()
-        )
-        self.action_net = nn.Linear(hidden_dim, output_dim)
-        self.action_net.weight.data = self.pretrained_weights['action_net.weight']
-        self.action_net.bias.data = self.pretrained_weights['action_net.bias']
-
-    def forward(self, obs: torch.Tensor, encoding: torch.Tensor = None):
-        if isinstance(obs, torch.Tensor):
-            x = obs.cuda()
-        else:
-            x = torch.from_numpy(obs.astype(np.float32)).cuda()
-        h = self.network(x[..., 3:])
-        a = self.action_net(h)
-        return Delta(a)
     def get_action(self, obs:np.ndarray, encoding:torch.Tensor = None):
         return elem_or_tuple_to_numpy(self._actions_from_distribution(self.forward(obs), mode='sample')), {}
         
